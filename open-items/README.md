@@ -34,13 +34,32 @@ For the supervisor's independence to be a meaningful safety mechanism (rather th
 
 **Action needed:** Design and implement on the supervisor once the UART protocol is confirmed (the supervisor needs a way to know fault history to enforce this).
 
-## ~~`FORCE_PT`/`GATE_ENABLE` pin ownership contradiction~~ — RESOLVED
+## Pin table corrected against 2026-08-17 schematic
 
-**Status:** Resolved by Kommu's formal hardware design study (REV 1.0, July 2026).
+**Status:** Done — this book's pin tables were checked against `Schematic_Torque-Interceptor_2026-08-17.png` and the PCB render, and corrected. Listed here so anyone who read an earlier version of this book (or has firmware/test code written against it) knows what changed.
 
-The **supervisor** owns both `FORCE_PT` (PA6) and `GATE_ENABLE` (PA5), feeding a hardware AND gate (SN74LVC1G08) whose output drives the analog switch. The main MCU does not own these pins. Earlier main-MCU pin assignments (`FORCE_PT=PA6`, `GATE_ENABLE=PA5`, `HEARTBEAT_OUT=PA10`) were incorrect and have been corrected throughout this book — see [Firmware: Main MCU](../firmware/main-mcu.md) and [Firmware: Supervisor MCU](../firmware/supervisor-mcu.md).
+| Signal | Old value in this book | Current schematic |
+|---|---|---|
+| Main MCU `HEARTBEAT` | `PC6`, named `HEARTBEAT_OUT` | `PA12`, remapped as `PA10` |
+| Main MCU `UART_TX` | `PA9` | `PA8` |
+| Main MCU `UART_RX` | `PA8` | `PA11`, remapped as `PA9` |
+| Main MCU gate signal | Not documented | New: `MCU_GATE_ENABLE`, ~`PB7` (pin number not fully legible — verify in EasyEDA) |
+| Supervisor `UART_TX` | `PA3` | `PA2` |
+| Supervisor `UART_RX` | `PA4` | `PA3` |
+| Supervisor heartbeat-read pin | `PA2`, named `HEARTBEAT_IN` | `PA5`, named `HEARTBEAT` |
+| Supervisor gate signal(s) | `FORCE_PT` (PA6) + `GATE_ENABLE` (PA5), both supervisor-owned | Single `SUPERVISOR_GATE_ENABLE` (PA6) — paired with the new `MCU_GATE_ENABLE` on the main MCU, one signal per chip instead of two from the supervisor |
+| Supervisor `FAULT_OUT` | `PB0` | `PA12`, remapped as `PA10` |
+| Supervisor part number | `STM32G030F6P6TR` (32KB flash) | `STM32G030F8P6TR` (64KB flash) |
 
-No further action needed on this item.
+**Action needed:** If any firmware, test harness, or bench wiring was done against the old table, re-check it against [Main MCU](../firmware/main-mcu.md) and [Supervisor MCU](../firmware/supervisor-mcu.md) before trusting it. The `MCU_GATE_ENABLE` / `SUPERVISOR_GATE_ENABLE` change is more than a rename — it changes which chip owns which AND-gate input, so any firmware that assumed the supervisor drove both gate inputs needs updating.
+
+## `5V_MON` rail monitoring appears missing
+
+**Status:** Flagged, not confirmed either way.
+
+Earlier notes had a `5V_MON` net on supervisor pin `PA7`, monitoring ECU 5V rail health via a voltage divider. On the current schematic, `PA7` shows no connected net. This could mean the feature was intentionally dropped, or the wire just isn't visible in the source image used to check this.
+
+**Action needed:** Confirm with Ting whether `5V_MON` was intentionally removed. If it was, the [BOM gap-analysis table](../hardware/bom.md#known-remaining-gaps-accepted-for-prototype-stage) entry for "separate sensor VDD monitoring" needs updating — it currently assumes `5V_MON` exists to cover that gap.
 
 ## Ignition detection
 
@@ -109,6 +128,6 @@ These four questions are explicitly logged in the design study as awaiting Ting'
 |---|---|---|
 | UART protocol | Supervisor recovery-latch enforcement | Ting sign-off |
 | Boost amount formula | Real boost testing | Ting input on boost curve |
-| `FORCE_PT`/`GATE_ENABLE` ownership | Finalizing either MCU's veto-pin firmware | Hardware verification |
+| `5V_MON` missing on current schematic | Power-rail monitoring gap, BOM gap-table accuracy | Confirm with Ting |
 | `fault_classify()` table | Confident fault handling | Ting's FMEDA review |
 | Ignition detection | Drive-cycle-scoped retry logic | Design decision |
