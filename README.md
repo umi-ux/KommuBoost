@@ -23,4 +23,4 @@ Target: **ASIL B** per ISO 26262.
 
 1. Start with [Project Overview](overview/README.md)
 2. Read [Open Items & TODOs](open-items/README.md) to understand what's blocking progress
-3. Then go deep into [Firmware Architecture](firmware/architecture.md)
+3. Then go deep into [Firmware Architecture](firmware/architecture.md) and [Complete Signal Flow](firmware/complete-flow.md) — the latter is the single page with the full cycle-by-cycle behavior and the block/flowchart/state diagrams

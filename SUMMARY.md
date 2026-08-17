@@ -17,6 +17,7 @@
 ## Firmware
 
 * [Architecture](firmware/architecture.md)
+* [Complete Signal Flow](firmware/complete-flow.md)
 * [State Machine](firmware/state-machine.md)
 * [Fault Handling](firmware/fault-handling.md)
 * [Main MCU](firmware/main-mcu.md)
