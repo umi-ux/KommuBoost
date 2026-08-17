@@ -8,7 +8,7 @@ An NC (normally closed) analog switch providing pass-through on power loss is ar
 
 ## Supervisor holds veto — correct for ASIL B
 
-The busier, CAN-facing chip (main MCU) should not hold final safety authority. Giving the supervisor — simpler, less busy, independently monitoring — the final veto over `FORCE_PT`/`GATE_ENABLE` is the actual safety mechanism, not a redundant nicety. If the main MCU's software has a bug, the supervisor's independence is what catches it.
+The busier, CAN-facing chip (main MCU) should not hold sole safety authority. Giving the supervisor — simpler, less busy, independently monitoring — its own independent half of the gate approval (`SUPERVISOR_GATE_ENABLE`, ANDed with the main MCU's `MCU_GATE_ENABLE`) is the actual safety mechanism, not a redundant nicety. If the main MCU's software has a bug, the supervisor's independence is what catches it.
 
 ## Datasheet vs. reference manual
 
