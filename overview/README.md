@@ -33,7 +33,7 @@ Two MCUs on the board:
 | MCU | Part | Role |
 |---|---|---|
 | Main MCU | STM32G0B1CBT6 | CAN-facing, owns the state machine, drives the DAC output |
-| Supervisor MCU | STM32G030F6P6TR | Holds physical veto authority (`FORCE_PT`/`GATE_ENABLE`), independent monitoring |
+| Supervisor MCU | STM32G030F8P6TR | Drives its half of the two-key gate approval (`SUPERVISOR_GATE_ENABLE`), independent monitoring |
 
 Key idea: the busier, CAN-facing chip (main MCU) does **not** hold final safety authority. The supervisor — simpler, less busy, independently monitoring — holds the veto. This separation is itself a safety mechanism appropriate for ASIL B.
 
