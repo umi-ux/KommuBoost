@@ -43,7 +43,7 @@ The PCB is powered from the **ECU's 5V VDD pin**, not the 12V battery (confirmed
 | Component | Part | Purpose |
 |---|---|---|
 | Main MCU | STM32G0B1CBT6 (LQFP-48) | Control path — calculates boost values, drives DAC outputs |
-| Supervisor MCU | STM32G030F6P6TR (TSSOP-20) | Safety path — independently monitors signals, can force pass-through without relying on main MCU firmware |
+| Supervisor MCU | STM32G030F8P6TR (TSSOP-20) | Safety path — independently monitors signals, can force pass-through without relying on main MCU firmware |
 | Op-amp (AFE + DAC scaling) | MCP6002DRG (dual, SOP-8) | Signal buffering and scaling — used on both the sensor-input side and the DAC-output side |
 | LDO | AMS1117-3.3 (SOT-223) | 5V → 3.3V regulation |
 | CAN transceiver | SN65HVD230DR-JSM | 3.3V-native CAN interface (chosen over TJA1050, which needs 5V) |
@@ -65,16 +65,16 @@ This is the most robust of three architectures considered in the requirements do
 
 See [Safety Architecture](safety-architecture.md) for the full safety-goal-by-safety-goal breakdown, [Schematic Details](schematic-details.md) for the sheet-by-sheet signal path, and [Bill of Materials](bom.md) for the complete BOM.
 
-## Corrected: pin ownership of `FORCE_PT` / `GATE_ENABLE`
+## Gate-enable signals: one per chip, not both from the supervisor
 
-This was previously an open contradiction in this GitBook (scenario-flow doc said main MCU, schematic said supervisor). **The design study resolves it: the supervisor owns both.**
+This section previously described the supervisor owning both AND-gate inputs (`FORCE_PT` and `GATE_ENABLE`). **The current schematic (`Schematic_Torque-Interceptor_2026-08-17.png`) shows a different, stronger arrangement:** each chip drives its own single gate-approval signal into the AND gate.
 
 | Signal | Owner | Pin |
 |---|---|---|
-| `FORCE_PT` | **Supervisor** | PA6 |
-| `GATE_ENABLE` | **Supervisor** | PA5 |
+| `MCU_GATE_ENABLE` | Main MCU | ~PB7 |
+| `SUPERVISOR_GATE_ENABLE` | Supervisor | PA6 |
 
-Both feed the AND gate; `AND_OUT` drives the TS5A23157. The main MCU does **not** own these pins — its earlier documented pin assignments (`FORCE_PT=PA6`, `GATE_ENABLE=PA5` on the *main* MCU) were incorrect and have been corrected throughout this book. See [Main MCU](../firmware/main-mcu.md) and [Supervisor MCU](../firmware/supervisor-mcu.md) for the corrected, per-chip pin tables.
+Both feed the AND gate; `AND_OUT` drives the TS5A23157. This is a two-key design where **neither chip alone can assert both AND-gate inputs** — a stronger guarantee than the previous documented arrangement (which had the supervisor alone driving both inputs). See [Main MCU](../firmware/main-mcu.md) and [Supervisor MCU](../firmware/supervisor-mcu.md) for the corrected, per-chip pin tables, and [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) for the full list of what changed in this revision.
 
 ## Design verification
 

@@ -10,7 +10,7 @@ Sheet-by-sheet breakdown from the hardware design study. Designed in EasyEDA wit
 | Sheet 2 (Output Submodule) | Output Submodule | MCP6002 ×2, TS5A23157, SN74LVC1G08, LM393 |
 | AFE block | AFE & Conditioning | MCP6002 ×2, RC filters, voltage dividers |
 | MCU block | Main MCU | STM32G0B1CBT6, 8MHz crystal |
-| Supervisor block | Safety Supervisor | STM32G030F6P6TR |
+| Supervisor block | Safety Supervisor | STM32G030F8P6TR |
 
 All sheets are marked complete in the design study.
 
@@ -62,6 +62,8 @@ Sensor signal (0–5V)
 
 ## Main MCU block — STM32G0B1CBT6
 
+> Table corrected against `Schematic_Torque-Interceptor_2026-08-17.png` — see [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) for what changed.
+
 | Pin | Net label | Direction | Purpose |
 |---|---|---|---|
 | PA0 (11) | `MAIN_ADC` | In | Read conditioned torque MAIN signal |
@@ -70,9 +72,10 @@ Sensor signal (0–5V)
 | PA5 (16) | `DAC_SUB` | Out | DAC channel 2 — SUB modified signal |
 | PB8 (47) | `CAN_RX` | In | FDCAN receive from vehicle bus |
 | PB9 (48) | `CAN_TX` | Out | FDCAN transmit to vehicle bus |
-| PC6 (30) | `HEARTBEAT_OUT` | Out | 50ms pulse to supervisor watchdog |
-| PA9 (29) | `UART_TX` | Out | Diagnostic UART to supervisor |
-| PA8 (28) | `UART_RX` | In | Diagnostic UART from supervisor |
+| ~PB7 (46) ⚠️ | `MCU_GATE_ENABLE` | Out | Main MCU's half of the two-key AND-gate approval — new pin, see note below |
+| PA12 (33, remap PA10) | `HEARTBEAT` | Out | 50ms pulse to supervisor watchdog |
+| PA11 (32, remap PA9) | `UART_RX` | In | Diagnostic UART from supervisor |
+| PA8 (28) | `UART_TX` | Out | Diagnostic UART to supervisor |
 | PA13 (35) | `MCU_SWDIO` | Debug | SWD programming data |
 | PA14 (36) | `MCU_SWDCLK` | Debug | SWD programming clock + BOOT0 |
 | PC14/PC15 (2/3) | Crystal X1 | Clock | 8MHz external crystal |
@@ -80,28 +83,30 @@ Sensor signal (0–5V)
 | VREF+ (5) | +3.3V + 100nF | Power | ADC reference voltage |
 | VDD/VDDA (6) | +3.3V | Power | Main and analog supply |
 
-> **Note:** `HEARTBEAT_OUT` is `PC6`, not `PA10`. Earlier notes had this on `PA10` — corrected here against the design study.
+> **Corrected again:** `HEARTBEAT` is on `PA12` (remapped as `PA10`), not `PC6` as the previous revision of this book had it. `UART_TX`/`UART_RX` also moved — `UART_TX` is now `PA8` and `UART_RX` is `PA11` (remapped as `PA9`), which is the reverse of the pin-to-direction mapping documented before. A new `MCU_GATE_ENABLE` pin (~`PB7`) has also appeared, feeding the AND gate alongside the supervisor's `SUPERVISOR_GATE_ENABLE` — see [Sheet 2 below](#sheet-2--output-submodule).
 
-## Supervisor block — STM32G030F6P6TR
+## Supervisor block — STM32G030F8P6TR
+
+> Table corrected against `Schematic_Torque-Interceptor_2026-08-17.png`. Part number also corrected: the schematic shows `STM32G030F8P6TR` (64KB flash), not `F6P6TR` (32KB) — flagged in [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic).
 
 | Pin | Net label | Direction | Purpose |
 |---|---|---|---|
 | PA0 (7) | `MAIN_ADC` | In | Independent torque MAIN read |
 | PA1 (8) | `SUB_ADC` | In | Independent torque SUB read |
-| PA2 (9) | `HEARTBEAT_IN` | In | Main MCU watchdog heartbeat |
-| PA3 (10) | `UART_TX` | Out | Diagnostic to main MCU (crossover) |
-| PA4 (11) | `UART_RX` | In | Diagnostic from main MCU (crossover) |
-| PA5 (12) | `GATE_ENABLE` | Out | Arms the output stage (to AND gate) |
-| PA6 (13) | `FORCE_PT` | Out | Active safety signal (to AND gate) |
-| PA7 (14) | `5V_MON` | In | ECU 5V rail health monitoring |
-| PB0 (15) | `FAULT_OUT` | In | Hardware output fault from LM393 |
+| PA2 (9) | `UART_TX` | Out | Diagnostic to main MCU (crossover) |
+| PA3 (10) | `UART_RX` | In | Diagnostic from main MCU (crossover) |
+| PA5 (12) | `HEARTBEAT` | In | Reads main MCU's watchdog heartbeat |
+| PA6 (13) | `SUPERVISOR_GATE_ENABLE` | Out | Supervisor's half of the two-key AND-gate approval |
+| PA12 (17, remap PA10) | `FAULT_OUT` | In | Hardware output fault from LM393 |
 | PA13 (18) | `SWDIO` | Debug | SWD programming data |
-| PA14 (19) | `SWDCLK` | Debug | SWD programming clock + BOOT0 |
+| ~PA14 (19) | `SWDCLK` | Debug | SWD programming clock + BOOT0 |
 | VDDA/DDA (4) | +3.3V | Power | Combined VDD+VDDA (TSSOP-20 pinout) |
 
 > The TSSOP-20 package combines VDD+VDDA onto one physical pin (Pin 4) and VSS+VSSA onto one pin (Pin 5). This is correct per the datasheet, not a schematic error.
 
-> **This is the corrected ownership** for `FORCE_PT`/`GATE_ENABLE` — see [Hardware Summary](README.md#corrected-pin-ownership-of-force_pt--gate_enable).
+> **`FORCE_PT`/`GATE_ENABLE` are no longer separate nets.** The previous revision of this book described the supervisor owning both AND-gate inputs. The current schematic shows one gate-approval signal per chip instead — `SUPERVISOR_GATE_ENABLE` here and `MCU_GATE_ENABLE` on the main MCU — which is a stronger two-key arrangement, not just a rename. See [Sheet 2 below](#sheet-2--output-submodule).
+>
+> **`PA7` (previously `5V_MON`) has no net connection on the current schematic.** Flagged in [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing) — needs confirming with Ting whether ECU 5V rail monitoring was intentionally dropped.
 
 ## Sheet 2 — Output Submodule
 
@@ -120,12 +125,14 @@ DAC_SUB — identical circuit → DAC_SUB_OUT (0–5V) → TS5A23157 NO2
 **Sub-circuit 2: Dual gate logic** (SN74LVC1G08 U9)
 
 ```
-FORCE_PT (supervisor PA6)    → AND gate Pin A
-GATE_ENABLE (supervisor PA5) → AND gate Pin B
-                              → AND_OUT → TS5A23157 IN1 + IN2
+SUPERVISOR_GATE_ENABLE (supervisor PA6) → AND gate Pin A
+MCU_GATE_ENABLE (main MCU ~PB7)          → AND gate Pin B
+                                          → AND_OUT → TS5A23157 IN1 + IN2
 
-AND_OUT = HIGH only when BOTH FORCE_PT=HIGH AND GATE_ENABLE=HIGH
+AND_OUT = HIGH only when BOTH SUPERVISOR_GATE_ENABLE=HIGH AND MCU_GATE_ENABLE=HIGH
 ```
+
+> One gate-enable signal per chip, not two from the supervisor as earlier notes had it — see the correction notes on the [Main MCU](#main-mcu-block--stm32g0b1cbt6) and [Supervisor MCU](#supervisor-block--stm32g030f8p6tr) tables above.
 
 **Sub-circuit 3: Analog switch** (TS5A23157 U7)
 
@@ -173,14 +180,14 @@ The RC filter (1kΩ + 100nF, cutoff ~1.6kHz) ahead of the comparator input filte
 | `DAC_SUB` | MCU PA5 | Sheet 5 op-amp U6.2 | Modified SUB (0–3.3V) |
 | `DAC_MAIN_OUT` | Op-amp U6.1 output | TS5A23157 NO1 | Scaled modified MAIN (0–5V) |
 | `DAC_SUB_OUT` | Op-amp U6.2 output | TS5A23157 NO2 | Scaled modified SUB (0–5V) |
-| `AND_OUT` | SN74LVC1G08 output | TS5A23157 IN1, IN2 | Combined supervisor approval |
-| `FORCE_PT` | Supervisor PA6 | AND gate Pin A | Active safety signal |
-| `GATE_ENABLE` | Supervisor PA5 | AND gate Pin B | Output stage arm signal |
+| `AND_OUT` | SN74LVC1G08 output | TS5A23157 IN1, IN2 | Combined gate approval |
+| `SUPERVISOR_GATE_ENABLE` | Supervisor PA6 | AND gate Pin A | Supervisor's half of gate approval |
+| `MCU_GATE_ENABLE` | Main MCU ~PB7 | AND gate Pin B | Main MCU's half of gate approval |
 | `MAIN_OUT` | TS5A23157 NC1/NO1 | ECU via H1, LM393 IN+ | Final MAIN signal to ECU |
 | `SUB_OUT` | TS5A23157 NC2/NO2 | ECU via H1, LM393 IN+ | Final SUB signal to ECU |
-| `FAULT_OUT` | LM393 1OUT (Pin 1) | Supervisor PB0 (Pin 15) | Hardware output fault signal |
+| `FAULT_OUT` | LM393 1OUT (Pin 1) | Supervisor PA12/17 (remap PA10) | Hardware output fault signal |
 | `VREF` | R27+R28 divider | LM393 Pin 2 (1IN-) | 2.5V comparator reference |
-| `5V_MON` | R13+R14 divider | Supervisor PA7 | ECU 5V health monitor (2.5V nominal) |
-| `HEARTBEAT_OUT` | MCU PC6 | Supervisor PA2 | 50ms watchdog pulse |
-| `UART_TX` / `UART_RX` | MCU PA9/PA8, Supervisor PA3/PA4 | Cross-connected | UART diagnostic link |
+| `5V_MON` | — | Supervisor PA7 | **No net connection found on current schematic — see [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing)** |
+| `HEARTBEAT` | MCU PA12 (remap PA10) | Supervisor PA5 | 50ms watchdog pulse |
+| `UART_TX` / `UART_RX` | MCU PA8/PA11 (remap PA9), Supervisor PA2/PA3 | Cross-connected | UART diagnostic link |
 | `CAN_TX` / `CAN_RX` | MCU PB9/PB8 | SN65HVD230 | CAN bus |

@@ -8,7 +8,7 @@
 | U2 | Op-amp (AFE) | MCP6002DRG | SOP-8 | 1 | $0.20–0.40 |
 | U3 | Main MCU | STM32G0B1CBT6 | LQFP-48 | 1 | $2.22 |
 | U4 | CAN Transceiver | SN65HVD230DR | SOIC-8 | 1 | $0.30–0.50 |
-| U5 | Safety Supervisor | STM32G030F6P6TR | TSSOP-20 | 1 | $0.45 |
+| U5 | Safety Supervisor | STM32G030F8P6TR | TSSOP-20 | 1 | $0.45 |
 | U6 | Op-amp (Output) | MCP6002DRG | SOP-8 | 1 | $0.20–0.40 |
 | U7 | Analog Switch | TS5A23157DGSR | MSOP-10 | 1 | $0.20–0.30 |
 | U8 | Comparator | LM393DR(LX) | SOIC-8 | 1 | $0.05–0.10 |
@@ -47,9 +47,9 @@ These were gaps against the requirements document that were caught and closed du
 | Gap | Requirement ref | Status | Mitigation |
 |---|---|---|---|
 | AEC-Q component qualification | §7.1 | Partially addressed | Industrial-grade components used; automotive variants to be evaluated for production |
-| Separate sensor VDD monitoring | §7.2 | Accepted simplification | `5V_MON` covers the same rail; dedicated monitoring planned for V2 |
+| Separate sensor VDD monitoring | §7.2 | Accepted simplification | `5V_MON` was meant to cover the same rail, but the current schematic shows no net on that pin — see [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing) |
 | ESD protection on H1/H2 signal connectors | §7.7 | Partial | PESD1CAN added to CAN; H1/H2 ESD arrays planned for V2 |
-| Cranking/brownout behavior | §7.6 | Partial | Supervisor `5V_MON` detects undervoltage; AMS1117 handles brownout |
+| Cranking/brownout behavior | §7.6 | Partial | Was meant to use supervisor `5V_MON` for undervoltage detection (pin now shows no net, see [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing)); AMS1117 handles brownout regardless |
 | Full FMEDA/FTA analysis | §13 | Not yet done | Required before moving from prototype to production |
 | Cybersecurity threat analysis | §10 | Not yet done | Required before any vehicle deployment |
 | Formal HARA | §4 | Not yet done | Required before any vehicle deployment |

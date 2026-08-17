@@ -6,11 +6,11 @@ Source: Section 3 of the hardware design study. This is the safety-goal-by-safet
 
 | Safety goal | How it's addressed |
 |---|---|
-| Prevent unintended steering assist | Dual gate logic — AND gate requires both `FORCE_PT` and `GATE_ENABLE` HIGH |
+| Prevent unintended steering assist | Dual gate logic — AND gate requires `MCU_GATE_ENABLE` (main MCU) and `SUPERVISOR_GATE_ENABLE` (supervisor) both HIGH |
 | Prevent loss of driver steering authority | NC switch default — OEM signal always available via a hardware path |
 | Prevent sustained wrong-direction assist | LM393 output monitor detects a MAIN+SUB mismatch → immediate pass-through |
 | Prevent modification when vehicle state unknown | CAN timeout detection in supervisor firmware |
-| Prevent modification during fault | Supervisor forces `FORCE_PT` = LOW on any fault condition |
+| Prevent modification during fault | Supervisor forces `SUPERVISOR_GATE_ENABLE` = LOW on any fault condition |
 | Immediate reversion on fault | Hardware AND gate — pulling either input LOW forces instant pass-through |
 | No unsafe behavior during startup/reset | `BOOT0` pull-down ensures a clean boot; NC switch is active throughout startup |
 | No single fault causing sustained wrong output | Dual gate + independent supervisor + LM393 hardware monitor — three independent layers |
@@ -30,7 +30,7 @@ Source: Section 3 of the hardware design study. This is the safety-goal-by-safet
 
 The design deliberately doesn't rely on any single mechanism:
 
-1. **Supervisor firmware** — independently reads `MAIN_ADC`/`SUB_ADC`, can drop `FORCE_PT` on any fault it detects, monitors a heartbeat from the main MCU
+1. **Supervisor firmware** — independently reads `MAIN_ADC`/`SUB_ADC`, can drop `SUPERVISOR_GATE_ENABLE` on any fault it detects, monitors a heartbeat from the main MCU
 2. **Hardware AND gate** — even if supervisor firmware has a bug that leaves one approval signal stuck HIGH, the *other* signal still has to independently go HIGH too. Even if all firmware on both chips crashed simultaneously, the gate defaults low.
 3. **LM393 hardware comparator** — watches the actual output pins (`MAIN_OUT`, `SUB_OUT`) after the switch, completely independent of both MCUs. If the complementary relationship breaks, `FAULT_OUT` goes low regardless of what either MCU's firmware believes is happening.
 
@@ -48,5 +48,5 @@ This layering is what allows the "no software-only safety claim" principle to ac
 | Output stage fault detection | LM393 resistor-averaging circuit monitors the MAIN_OUT + SUB_OUT relationship |
 | CAN safety gating | CAN request → main MCU → supervisor validates independently → AND gate |
 | Heartbeat watchdog | Main MCU sends a 50ms pulse; supervisor forces pass-through if the pulse stops |
-| Power rail monitoring | Supervisor reads `5V_MON` via a voltage divider |
+| Power rail monitoring | Was meant to read `5V_MON` via a voltage divider — pin shows no net on the current schematic, see [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing) |
 | OEM pass-through is default | Hardwired via TS5A23157 NC default state |
