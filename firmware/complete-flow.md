@@ -1,8 +1,8 @@
-# Complete Signal Flow (End-to-End)
+# Complete Signal Flow
 
 This is the full picture of what the firmware actually does, cycle by cycle, on both chips — self-test, the always-on monitoring layer, the boost decision, where the two chips' decisions physically meet, and fault recovery. Other firmware pages ([State Machine](state-machine.md), [Fault Handling](fault-handling.md)) cover the same ground per-topic; this page is the version that ties it all together in one place.
 
-> **Complete ≠ finished.** This describes what the current code does, end to end. It is not a validated, ready-to-ship system — see the ⚠️ flags below and [Open Items](../open-items/README.md) for everything still a placeholder or pending Ting's sign-off.
+> **Complete ≠ finished.** This describes what the current code does, end to end. It is not a validated, ready-to-ship system — see the ⚠️ flags below and [Open Items](../open-items/) for everything still a placeholder or pending Ting's sign-off.
 
 ## Block Diagram
 
@@ -54,20 +54,22 @@ MAIN_ADC / SUB_ADC in range? correlated? not stuck?
 ## The "always watching" layer — runs every cycle, forever, on both chips independently
 
 **Main MCU, every 10ms:**
-- Refresh watchdog (miss this and the chip auto-resets)
-- Toggle the heartbeat pin every 50ms
-- Read its own MAIN_ADC / SUB_ADC
-- Debounced check — in range, correlated, not stuck (one bad sample is forgiven; the *same* problem 3 cycles in a row is treated as real)
-- Poll CAN for the steering-LKAS message, decode `STEER_REQ` (1 bit) and `STEER_CMD` (11 bits) ⚠️ *still needs verification against a real CAN frame*
-- Send/receive diagnostic UART frames (informational only right now)
+
+* Refresh watchdog (miss this and the chip auto-resets)
+* Toggle the heartbeat pin every 50ms
+* Read its own MAIN\_ADC / SUB\_ADC
+* Debounced check — in range, correlated, not stuck (one bad sample is forgiven; the _same_ problem 3 cycles in a row is treated as real)
+* Poll CAN for the steering-LKAS message, decode `STEER_REQ` (1 bit) and `STEER_CMD` (11 bits) ⚠️ _still needs verification against a real CAN frame_
+* Send/receive diagnostic UART frames (informational only right now)
 
 **Supervisor, every 10ms:**
-- Refresh watchdog
-- Read its **own**, physically separate ADC taps on MAIN/SUB
-- Same kind of debounced check, computed completely independently of the main MCU
-- Read the main MCU's heartbeat pin — still toggling?
-- Read `FAULT_OUT` — has the LM393 comparator flagged the actual output voltage as wrong?
-- Send/receive diagnostic UART frames (informational only)
+
+* Refresh watchdog
+* Read its **own**, physically separate ADC taps on MAIN/SUB
+* Same kind of debounced check, computed completely independently of the main MCU
+* Read the main MCU's heartbeat pin — still toggling?
+* Read `FAULT_OUT` — has the LM393 comparator flagged the actual output voltage as wrong?
+* Send/receive diagnostic UART frames (informational only)
 
 The two chips never share a single ADC reading or a single "is it healthy" verdict — each computes its own answer from its own hardware.
 
@@ -75,7 +77,7 @@ The two chips never share a single ADC reading or a single "is it healthy" verdi
 
 ```
 if STEER_REQ == 0:
-    want_boost = false        (STEER_CMD is ignored entirely — Ting's rule)
+    want_boost = false        (STEER_CMD is ignored entirely)
 else:
     not currently boosting → need STEER_CMD > 200 to start
     already boosting        → only drop out if STEER_CMD < 185
@@ -112,11 +114,11 @@ dac_sub  = 4095 − dac_main                  (derived, keeps MAIN+SUB invariant
 → written to DAC_MAIN / DAC_SUB
 ```
 
-See [Open Items — boost amount formula](../open-items/README.md#boost-amount-formula).
+See [Open Items — boost amount formula](../open-items/#boost-amount-formula).
 
 ## Fault handling — main MCU (has a recovery policy; supervisor doesn't)
 
-The main MCU is the only chip that currently *remembers* fault history across cycles:
+The main MCU is the only chip that currently _remembers_ fault history across cycles:
 
 ```
 Any debounced check fails →
@@ -208,4 +210,4 @@ stateDiagram-v2
 
 ## Pin naming — now confirmed
 
-The pin names used in this page (`MCU_GATE_ENABLE`, `SUPERVISOR_GATE_ENABLE`, `HEARTBEAT`, `FAULT_OUT`) are now confirmed against `Schematic_Torque-Interceptor_2026-08-17.png` and match [Main MCU](main-mcu.md) and [Supervisor MCU](supervisor-mcu.md). This was previously flagged as an open discrepancy against an older pin table (which had `FORCE_PT`/`GATE_ENABLE` both on the supervisor, `HEARTBEAT_OUT` on `PC6`, etc.) — that older table has now been corrected throughout this book. See [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) for the full before/after list, and note that a couple of exact pin numbers (`MCU_GATE_ENABLE`'s `PB7`, `SWDCLK`'s `PA14`) are still marked ⚠️ as not fully legible on the source image — worth a quick EasyEDA check before wiring against them.
+The pin names used in this page (`MCU_GATE_ENABLE`, `SUPERVISOR_GATE_ENABLE`, `HEARTBEAT`, `FAULT_OUT`) are now confirmed against `Schematic_Torque-Interceptor_2026-08-17.png` and match [Main MCU](main-mcu.md) and [Supervisor MCU](supervisor-mcu.md). This was previously flagged as an open discrepancy against an older pin table (which had `FORCE_PT`/`GATE_ENABLE` both on the supervisor, `HEARTBEAT_OUT` on `PC6`, etc.) — that older table has now been corrected throughout this book. See [Open Items](../open-items/#pin-table-corrected-against-2026-08-17-schematic) for the full before/after list, and note that a couple of exact pin numbers (`MCU_GATE_ENABLE`'s `PB7`, `SWDCLK`'s `PA14`) are still marked ⚠️ as not fully legible on the source image — worth a quick EasyEDA check before wiring against them.
