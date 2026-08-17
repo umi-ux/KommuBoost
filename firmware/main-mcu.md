@@ -12,21 +12,26 @@ Files: `main_mcu.h`, `main_mcu.c`
 
 ## Confirmed pin assignments
 
+**Source: `Schematic_Torque-Interceptor_2026-08-17.png`, MCU sheet.** This supersedes earlier pin tables in this book — several pins changed since the last revision (noted below).
+
 | Pin | Net label | Direction | Purpose |
 |---|---|---|---|
-| PA0 | `MAIN_ADC` | In | Read conditioned torque MAIN signal |
-| PA1 | `SUB_ADC` | In | Read conditioned torque SUB signal |
-| PA4 | `DAC_MAIN` | Out | DAC channel 1 — MAIN modified signal |
-| PA5 | `DAC_SUB` | Out | DAC channel 2 — SUB modified signal |
-| PB8 | `CAN_RX` | In | FDCAN receive |
-| PB9 | `CAN_TX` | Out | FDCAN transmit |
-| PC6 | `HEARTBEAT_OUT` | Out | 50ms pulse to supervisor watchdog |
-| PA9 | `UART_TX` | Out | Diagnostic UART to supervisor |
-| PA8 | `UART_RX` | In | Diagnostic UART from supervisor |
-| PA13 | `MCU_SWDIO` | Debug | SWD programming data |
-| PA14 | `MCU_SWDCLK` | Debug | SWD programming clock + BOOT0 |
+| PA0 (11) | `MAIN_ADC` | In | Read conditioned torque MAIN signal |
+| PA1 (12) | `SUB_ADC` | In | Read conditioned torque SUB signal |
+| PA4 (15) | `DAC_MAIN` | Out | DAC channel 1 — MAIN modified signal |
+| PA5 (16) | `DAC_SUB` | Out | DAC channel 2 — SUB modified signal |
+| PB8 (47) | `CAN_RX` | In | FDCAN receive |
+| PB9 (48) | `CAN_TX` | Out | FDCAN transmit |
+| ~PB7 (46) ⚠️ | `MCU_GATE_ENABLE` | Out | **New pin, not previously documented.** Main MCU's own half of the two-key AND-gate approval — see note below. Top-side pin, exact number not fully legible on the schematic image; verify in EasyEDA before flashing. |
+| PA12 (33, remapped as PA10) | `HEARTBEAT` | Out | 50ms pulse to supervisor watchdog. **Changed from `PC6`** in earlier notes. |
+| PA11 (32, remapped as PA9) | `UART_RX` | In | Diagnostic UART from supervisor. **Direction/pin changed** — earlier notes had `UART_RX` on `PA8`. |
+| PA8 (28) | `UART_TX` | Out | Diagnostic UART to supervisor. **Direction/pin changed** — earlier notes had `UART_TX` on `PA9`. |
+| PA13 (35) | `MCU_SWDIO` | Debug | SWD programming data |
+| PA14 (36) | `MCU_SWDCLK` | Debug | SWD programming clock + BOOT0 |
 
-> **Correction:** the main MCU does **not** own `FORCE_PT` or `GATE_ENABLE` — those are supervisor pins (see [Supervisor MCU](supervisor-mcu.md)). Earlier notes had `FORCE_PT=PA6`, `GATE_ENABLE=PA5`, and `HEARTBEAT_OUT=PA10` on the main MCU; this was wrong. It's been corrected against Kommu's hardware design study — `HEARTBEAT_OUT` is `PC6` on the main MCU, and `FORCE_PT`/`GATE_ENABLE` belong entirely to the supervisor. See [Hardware Summary](../hardware/README.md#corrected-pin-ownership-of-force_pt--gate_enable) for why this matters.
+> **What changed from the previous pin table, and why it matters:** `HEARTBEAT` moved off `PC6`, and `UART_TX`/`UART_RX` swapped pins *and* effectively swapped direction relative to what was documented before. If any firmware or test harness code was written against the old table, it needs to be re-checked against this one before flashing. See [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic).
+>
+> **`MCU_GATE_ENABLE` is new to this book.** Earlier docs only described the supervisor driving both AND-gate inputs (`FORCE_PT`/`GATE_ENABLE`). The current schematic shows the AND gate driven by one pin from **each** chip — `MCU_GATE_ENABLE` from the main MCU and `SUPERVISOR_GATE_ENABLE` from the supervisor (see [Supervisor MCU](supervisor-mcu.md)) — which is a stronger two-key arrangement than previously documented: neither chip alone can assert both AND-gate inputs. This matches the behavior described in [Complete Signal Flow](complete-flow.md).
 
 ## ADC constants (AFE-derived)
 

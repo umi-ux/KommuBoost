@@ -1,5 +1,17 @@
 # Fault Handling
 
+For the full cycle-by-cycle flow this fits into, see [Complete Signal Flow](complete-flow.md#fault-handling--main-mcu-has-a-recovery-policy-supervisor-doesnt).
+
+## Main MCU vs. supervisor — different recovery behavior, on purpose (for now)
+
+| | Main MCU | Supervisor |
+|---|---|---|
+| Remembers fault history across cycles? | Yes — the two-bucket policy below | No — re-evaluates fresh every cycle |
+| Can latch into a persistent fault state? | Yes, on repeated compute-integrity faults | No — a fault just forces its gate pin low for that cycle |
+| Recovery | Transient: auto-retry after ~200ms. Compute-integrity: one retry, then latched until power/ignition cycle | Next cycle starts clean, no memory (except a one-time report after a watchdog reset) |
+
+This asymmetry is a known gap, not a final design — see [known gaps](#known-gaps-in-fault-coverage) below and [Open Items](../open-items/README.md#supervisor-side-recovery-latch-enforcement).
+
 ## Two-bucket recovery policy
 
 Faults are classified into two buckets, each with different recovery behavior:

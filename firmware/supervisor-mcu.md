@@ -1,30 +1,34 @@
-# Supervisor MCU (`STM32G030F6P6TR`)
+# Supervisor MCU (`STM32G030F8P6TR`)
 
 Files: `main_supervisor.h`, `main_supervisor.c`
 
+> **Part number correction:** the schematic dated 2026-08-17 shows `STM32G030F8P6TR` (64KB flash), not `STM32G030F6P6TR` (32KB flash) as earlier notes had it. Flagged in [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) to confirm this is intentional and not a part-selection typo.
+
 ## Role
 
-The supervisor is deliberately the simpler, less busy chip — and holds **final veto authority** over pass-through vs. boost via `FORCE_PT` and `GATE_ENABLE`. It independently monitors the system rather than trusting the main MCU's state.
+The supervisor is deliberately the simpler, less busy chip. It independently monitors the system and drives its own half of the boost-approval gate (`SUPERVISOR_GATE_ENABLE`) — the main MCU drives the other half (`MCU_GATE_ENABLE`), and both must be HIGH for boost to activate. Neither chip can force boost alone.
 
-This split is a deliberate ASIL B safety mechanism: the CAN-facing, functionally busy main MCU is not trusted with the final word on whether boost is engaged. See [Key Learnings](../key-learnings/README.md#supervisor-holds-veto-is-correct-for-asil-b).
+This split is a deliberate ASIL B safety mechanism: the CAN-facing, functionally busy main MCU is not trusted with sole authority over whether boost is engaged. See [Key Learnings](../key-learnings/README.md#supervisor-holds-veto-is-correct-for-asil-b).
 
 ## Confirmed pin assignments
 
+**Source: `Schematic_Torque-Interceptor_2026-08-17.png`, Safety Supervisor sheet.** This supersedes earlier pin tables in this book — several pins changed since the last revision (noted below).
+
 | Pin | Net label | Direction | Purpose |
 |---|---|---|---|
-| PA0 | `MAIN_ADC` | In | Independent torque MAIN read |
-| PA1 | `SUB_ADC` | In | Independent torque SUB read |
-| PA2 | `HEARTBEAT_IN` | In | Main MCU watchdog heartbeat |
-| PA3 | `UART_TX` | Out | Diagnostic to main MCU (crossover) |
-| PA4 | `UART_RX` | In | Diagnostic from main MCU (crossover) |
-| PA5 | `GATE_ENABLE` | Out | Arms the output stage (to AND gate) |
-| PA6 | `FORCE_PT` | Out | Active safety signal (to AND gate) |
-| PA7 | `5V_MON` | In | ECU 5V rail health monitoring |
-| PB0 | `FAULT_OUT` | In | Hardware output fault from LM393 |
-| PA13 | `SWDIO` | Debug | SWD programming data |
-| PA14 | `SWDCLK` | Debug | SWD programming clock + BOOT0 |
+| PA0 (7) | `MAIN_ADC` | In | Independent torque MAIN read |
+| PA1 (8) | `SUB_ADC` | In | Independent torque SUB read |
+| PA2 (9) | `UART_TX` | Out | Diagnostic to main MCU. **Changed from `PA3`.** |
+| PA3 (10) | `UART_RX` | In | Diagnostic from main MCU. **Changed from `PA4`.** |
+| PA5 (12) | `HEARTBEAT` | In | Main MCU watchdog heartbeat. **Changed from `PA2`** (previously named `HEARTBEAT_IN`). |
+| PA6 (13) | `SUPERVISOR_GATE_ENABLE` | Out | Supervisor's own half of the two-key AND-gate approval. **Replaces the old `FORCE_PT`/`GATE_ENABLE` pair** — see note below. |
+| PA12 (17, remapped as PA10) | `FAULT_OUT` | In | Hardware output fault from LM393. **Changed from `PB0`.** |
+| PA13 (18) | `SWDIO` | Debug | SWD programming data |
+| ~PA14/19 | `SWDCLK` | Debug | SWD programming clock + BOOT0 |
 
-**This ownership is confirmed**, resolving what was previously an open contradiction: the scenario flow document had described the *main* MCU raising `FORCE_PT`, while the schematic showed the *supervisor* owning it. Kommu's hardware design study settles this — the supervisor owns both `FORCE_PT` and `GATE_ENABLE`, feeding a hardware AND gate (SN74LVC1G08) whose output (`AND_OUT`) drives the TS5A23157 analog switch. Both signals must be HIGH simultaneously for boost to activate; the gate can't be bypassed by software on either chip. See [Hardware Summary](../hardware/README.md#corrected-pin-ownership-of-force_pt--gate_enable) and [Schematic Details](../hardware/schematic-details.md#sheet-2--output-submodule).
+> **`FORCE_PT`/`GATE_ENABLE` no longer exist as separate pins.** The current schematic shows a single `SUPERVISOR_GATE_ENABLE` pin (PA6) feeding one input of the AND gate, with `MCU_GATE_ENABLE` from the main MCU feeding the other (see [Main MCU](main-mcu.md)). This is a **different arrangement** than what this book previously documented (supervisor alone driving both AND-gate inputs) — it's a stronger two-key design, since now neither chip alone can assert both inputs. The [Hardware Summary](../hardware/README.md) and [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) reflect this correction; treat any earlier reference to `FORCE_PT` in this book as historical.
+>
+> **`PA7` (`5V_MON` in earlier notes) shows no connection on the current schematic.** ECU 5V rail monitoring may have been dropped in this revision, or the wire just isn't clearly visible in the source image — flagged in [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing) to confirm with Ting rather than assumed either way.
 
 ## Timing
 

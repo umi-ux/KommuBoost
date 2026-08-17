@@ -1,23 +1,22 @@
 # State Machine
 
-The main MCU owns a 5-state state machine:
+The main MCU owns a 5-state state machine. For the full cycle-by-cycle behavior on both chips (self-test, debounce, hysteresis, watchdog, fault recovery), see [Complete Signal Flow](complete-flow.md) — this page is the state-machine-only summary.
 
+```mermaid
+stateDiagram-v2
+    [*] --> Power_Off_NC_PassThrough
+    Power_Off_NC_PassThrough --> Startup_SelfTest: power applied
+    Startup_SelfTest --> Normal_PassThrough: self-test pass
+    Startup_SelfTest --> Fault_Detected: self-test fail
+    Normal_PassThrough --> Boost_Active: CAN value > 200
+    Boost_Active --> Normal_PassThrough: CAN value < 185 (hysteresis)
+    Normal_PassThrough --> Fault_Detected: fault detected
+    Boost_Active --> Fault_Detected: fault detected
 ```
-Power_Off_NC_PassThrough
-        │  (power applied)
-        ▼
-Startup_SelfTest
-        │  (self-test passes)
-        ▼
-Normal_PassThrough  ◄──────────────┐
-        │  (CAN value > 200)       │ (CAN value < 185,
-        ▼                          │  hysteresis exit)
-Boost_Active ──────────────────────┘
-        │
-        │  (fault detected, from any state)
-        ▼
-Fault_Detected
-```
+
+## Startup self-test
+
+On power-up, before any active operation, the main MCU runs one **raw (non-debounced)** check: is `MAIN_ADC`/`SUB_ADC` in range, correlated, and not stuck? Fail → straight to `Fault_Detected`. Pass → `Normal_PassThrough`. This is a single pass/fail check, distinct from the continuous *debounced* monitoring described below and in [Complete Signal Flow](complete-flow.md#the-always-watching-layer--runs-every-cycle-forever-on-both-chips-independently).
 
 ## State descriptions
 
