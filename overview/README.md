@@ -1,13 +1,10 @@
 ---
-cover: >-
-  https://images.unsplash.com/photo-1592659762303-90081d34b277?crop=entropy&cs=srgb&fm=jpg&ixid=M3wxOTcwMjR8MHwxfHNlYXJjaHwxfHxwY2J8ZW58MHx8fHwxNzg2OTQ2ODg5fDA&ixlib=rb-4.1.0&q=85
 coverY: 0
-coverHeight: 191
 layout:
   width: default
   cover:
     visible: true
-    size: full
+    size: hero
     mask: none
   title:
     visible: true

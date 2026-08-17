@@ -1,6 +1,6 @@
 # Hardware Summary
 
-The hardware phase of this project is **complete**, formalized in Kommu's _KommuAssist2 — EPS Torque Sensor Interceptor PCB: Hardware Design Study_ (REV 1.0, July 2026, CTO: Ting, ASIL B confirmed). That document is the authoritative source for hardware decisions — this page and its sub-pages summarize it for firmware engineers and for handover.
+The hardware phase of this project is **complete**, formalized in this page. This document is the authoritative source for hardware decisions — this page and its sub-pages summarize it for firmware engineers and for handover.
 
 ## Signal path
 
@@ -31,7 +31,7 @@ Default state (no power, or the analog switch not actuated): **OEM pass-through*
 
 ## Power architecture
 
-The PCB is powered from the **ECU's 5V VDD pin**, not the 12V battery (confirmed by Ting):
+The PCB is powered from the **ECU's 5V VDD pin**, not the 12V battery:
 
 * No 12V step-down converter needed — simpler design
 * Cleaner power — already regulated by the ECU
@@ -51,8 +51,6 @@ The PCB is powered from the **ECU's 5V VDD pin**, not the 12V battery (confirmed
 | AND gate                   | **SN74LVC1G08**DCKR (SOT-353) | Hardware-enforces both supervisor approval signals HIGH before boost can activate — cannot be bypassed by software |
 | Output comparator          | LM393DR(LX) (dual, SOIC-8)    | Monitors MAIN+SUB output relationship, independent of firmware                                                     |
 | Crystal                    | 8MHz SMD                      | Accurate clock for CAN bus timing (internal HSI's ±1% is too loose)                                                |
-
-> **Part number correction:** the analog switch is **TS5A23157**, not TS5A23159 as earlier notes had it. TS5A23157 is confirmed against the formal design study and is what's on the BOM.
 
 ## Safety architecture — Concept C: Safety-Partitioned Interposer
 
