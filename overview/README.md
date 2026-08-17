@@ -1,10 +1,37 @@
+---
+cover: >-
+  https://images.unsplash.com/photo-1592659762303-90081d34b277?crop=entropy&cs=srgb&fm=jpg&ixid=M3wxOTcwMjR8MHwxfHNlYXJjaHwxfHxwY2J8ZW58MHx8fHwxNzg2OTQ2ODg5fDA&ixlib=rb-4.1.0&q=85
+coverY: 0
+coverHeight: 191
+layout:
+  width: default
+  cover:
+    visible: true
+    size: full
+    mask: none
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+  metadata:
+    visible: true
+  tags:
+    visible: true
+  actions:
+    visible: true
+---
+
 # Project Overview
 
 ## Context
 
 Kommu is a Malaysian ADAS company building KommuAssist2, a fork of openpilot/bukapilot. The torque interceptor is a safety-rated PCB that enables KommuAssist2 to actively boost steering assist on Perodua vehicles.
-
-This is an OJT (internship) project, developed under the supervision of Ting (senior engineer), who provides design requirements and final sign-off on safety-relevant decisions.
 
 ## What problem it solves
 

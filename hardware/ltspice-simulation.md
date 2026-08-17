@@ -1,4 +1,4 @@
-# LTspice Simulation — MCP6002 AFE
+# LTspice Simulation
 
 ## Objective
 
@@ -10,8 +10,8 @@ Verify the MCP6002 op-amp circuit behavior on the AFE (sensor input) and DAC-sca
 
 **Findings:**
 
-- At VCC = 5V: output correctly follows input across the full 0–5V range ✅
-- At VCC = 3.3V: output clips at ~3.1V — the upper portion of the signal (3.1V–5V) is lost ❌
+* At VCC = 5V: output correctly follows input across the full 0–5V range ✅
+* At VCC = 3.3V: output clips at \~3.1V — the upper portion of the signal (3.1V–5V) is lost ❌
 
 **Design decision:** the MCP6002's VDD pin (Pin 8) is connected to VCC (5V), not the 3.3V rail, on both the AFE and DAC-scaling stages. This gives rail-to-rail output across the full 0–5V torque signal range. The 3.3V rail is reserved for digital chips only (main MCU, supervisor, AND gate).
 
@@ -21,12 +21,14 @@ Verify the MCP6002 op-amp circuit behavior on the AFE (sensor input) and DAC-sca
 
 **Findings:**
 
-- Output range: 0V to ~4.95V (expected 5V — within component tolerance) ✅
-- Gain verified: 3.3V × 1.5 = 4.95V, matching the theoretical calculation ✅
-- No clipping across the full input range ✅
-- Signal shape preserved, minimal distortion ✅
+* Output range: 0V to \~4.95V (expected 5V — within component tolerance) ✅
+* Gain verified: 3.3V × 1.5 = 4.95V, matching the theoretical calculation ✅
+* No clipping across the full input range ✅
+* Signal shape preserved, minimal distortion ✅
 
 > LTspice simulation screenshots are embedded directly in the EasyEDA schematic (Sheet 2 and the Output Submodule sheet) as visual reference — not reproduced here.
+
+<div><figure><img src="../.gitbook/assets/afe.png" alt=""><figcaption></figcaption></figure> <figure><img src="../.gitbook/assets/Screenshot 2026-07-06 162049.png" alt=""><figcaption></figcaption></figure></div>
 
 ## Why this matters beyond this one circuit
 

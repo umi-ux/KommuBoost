@@ -4,13 +4,13 @@ Sheet-by-sheet breakdown from the hardware design study. Designed in EasyEDA wit
 
 ## Sheet overview
 
-| Sheet | Title | Key components |
-|---|---|---|
-| Sheet 1 | Power Supply + CAN Interface + Debug | AMS1117-3.3, SN65HVD230, SWD headers |
-| Sheet 2 (Output Submodule) | Output Submodule | MCP6002 ×2, TS5A23157, SN74LVC1G08, LM393 |
-| AFE block | AFE & Conditioning | MCP6002 ×2, RC filters, voltage dividers |
-| MCU block | Main MCU | STM32G0B1CBT6, 8MHz crystal |
-| Supervisor block | Safety Supervisor | STM32G030F8P6TR |
+| Sheet                      | Title                                | Key components                            |
+| -------------------------- | ------------------------------------ | ----------------------------------------- |
+| Sheet 1                    | Power Supply + CAN Interface + Debug | AMS1117-3.3, SN65HVD230, SWD headers      |
+| Sheet 2 (Output Submodule) | Output Submodule                     | MCP6002 ×2, TS5A23157, SN74LVC1G08, LM393 |
+| AFE block                  | AFE & Conditioning                   | MCP6002 ×2, RC filters, voltage dividers  |
+| MCU block                  | Main MCU                             | STM32G0B1CBT6, 8MHz crystal               |
+| Supervisor block           | Safety Supervisor                    | STM32G030F8P6TR                           |
 
 All sheets are marked complete in the design study.
 
@@ -23,17 +23,17 @@ ECU 5V (VCC) → D1 Schottky (reverse polarity) → D2 TVS (load dump)
              → R1 (330Ω) + LED2 (power indicator)
 ```
 
-| Ref | Value | Package | Purpose |
-|---|---|---|---|
-| H1 | HDR-F-2.54 2×2 | Through-hole | ECU-side connector |
-| H2 | HDR-F-2.54 2×2 | Through-hole | Sensor-side connector |
-| U1 | AMS1117-3.3 | SOT-223 | 5V → 3.3V LDO regulator |
-| C1 | 10µF | 0805 | LDO input decoupling |
-| C2 | 22µF | 0805 | LDO output stability (mandatory per datasheet) |
-| R1 | 330Ω | 0402 | LED current limiting |
-| LED2 | LED | 0402 | Power indicator |
-| D1 | SS14 Schottky | SOD-123 | Reverse polarity protection |
-| D2 | SMBJ5.0A TVS | SMB | Load dump protection |
+| Ref  | Value          | Package      | Purpose                                        |
+| ---- | -------------- | ------------ | ---------------------------------------------- |
+| H1   | HDR-F-2.54 2×2 | Through-hole | ECU-side connector                             |
+| H2   | HDR-F-2.54 2×2 | Through-hole | Sensor-side connector                          |
+| U1   | AMS1117-3.3    | SOT-223      | 5V → 3.3V LDO regulator                        |
+| C1   | 10µF           | 0805         | LDO input decoupling                           |
+| C2   | 22µF           | 0805         | LDO output stability (mandatory per datasheet) |
+| R1   | 330Ω           | 0402         | LED current limiting                           |
+| LED2 | LED            | 0402         | Power indicator                                |
+| D1   | SS14 Schottky  | SOD-123      | Reverse polarity protection                    |
+| D2   | SMBJ5.0A TVS   | SMB          | Load dump protection                           |
 
 ## AFE — Analog Front End & Conditioning
 
@@ -49,64 +49,62 @@ Sensor signal (0–5V)
   → MAIN_ADC / SUB_ADC → MCU PA0/PA1 + Supervisor PA0/PA1
 ```
 
-| Ref | Value | Purpose |
-|---|---|---|
-| R_protect ×2 | 100Ω | Short-circuit protection on MAIN and SUB lines |
-| D_clamp ×2 | BZX84C3V6 3.6V zener | Overvoltage clamp on MAIN and SUB |
-| R_bias ×2 | 1MΩ | Open-wire pull-down — a 0V reading means a broken wire |
-| U2.1, U2.2 | MCP6002 | Unity gain buffer — high-impedance sensor isolation |
-| R2, R7 | 1kΩ | RC filter resistor per channel |
-| C4, C5 | 100nF | RC filter capacitor per channel |
-| R3, R6 | 10kΩ | Voltage divider, top resistor |
-| R4, R5 | 20kΩ | Voltage divider, bottom resistor |
+| Ref           | Value                | Purpose                                                |
+| ------------- | -------------------- | ------------------------------------------------------ |
+| R\_protect ×2 | 100Ω                 | Short-circuit protection on MAIN and SUB lines         |
+| D\_clamp ×2   | BZX84C3V6 3.6V zener | Overvoltage clamp on MAIN and SUB                      |
+| R\_bias ×2    | 1MΩ                  | Open-wire pull-down — a 0V reading means a broken wire |
+| U2.1, U2.2    | MCP6002              | Unity gain buffer — high-impedance sensor isolation    |
+| R2, R7        | 1kΩ                  | RC filter resistor per channel                         |
+| C4, C5        | 100nF                | RC filter capacitor per channel                        |
+| R3, R6        | 10kΩ                 | Voltage divider, top resistor                          |
+| R4, R5        | 20kΩ                 | Voltage divider, bottom resistor                       |
 
 ## Main MCU block — STM32G0B1CBT6
 
-> Table corrected against `Schematic_Torque-Interceptor_2026-08-17.png` — see [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) for what changed.
+> List of pins and functions on Main MCU.
 
-| Pin | Net label | Direction | Purpose |
-|---|---|---|---|
-| PA0 (11) | `MAIN_ADC` | In | Read conditioned torque MAIN signal |
-| PA1 (12) | `SUB_ADC` | In | Read conditioned torque SUB signal |
-| PA4 (15) | `DAC_MAIN` | Out | DAC channel 1 — MAIN modified signal |
-| PA5 (16) | `DAC_SUB` | Out | DAC channel 2 — SUB modified signal |
-| PB8 (47) | `CAN_RX` | In | FDCAN receive from vehicle bus |
-| PB9 (48) | `CAN_TX` | Out | FDCAN transmit to vehicle bus |
-| ~PB7 (46) ⚠️ | `MCU_GATE_ENABLE` | Out | Main MCU's half of the two-key AND-gate approval — new pin, see note below |
-| PA12 (33, remap PA10) | `HEARTBEAT` | Out | 50ms pulse to supervisor watchdog |
-| PA11 (32, remap PA9) | `UART_RX` | In | Diagnostic UART from supervisor |
-| PA8 (28) | `UART_TX` | Out | Diagnostic UART to supervisor |
-| PA13 (35) | `MCU_SWDIO` | Debug | SWD programming data |
-| PA14 (36) | `MCU_SWDCLK` | Debug | SWD programming clock + BOOT0 |
-| PC14/PC15 (2/3) | Crystal X1 | Clock | 8MHz external crystal |
-| VBAT (4) | +3.3V | Power | Backup domain supply |
-| VREF+ (5) | +3.3V + 100nF | Power | ADC reference voltage |
-| VDD/VDDA (6) | +3.3V | Power | Main and analog supply |
+| Pin                   | Net label         | Direction | Purpose                                                                    |
+| --------------------- | ----------------- | --------- | -------------------------------------------------------------------------- |
+| PA0 (11)              | `MAIN_ADC`        | In        | Read conditioned torque MAIN signal                                        |
+| PA1 (12)              | `SUB_ADC`         | In        | Read conditioned torque SUB signal                                         |
+| PA4 (15)              | `DAC_MAIN`        | Out       | DAC channel 1 — MAIN modified signal                                       |
+| PA5 (16)              | `DAC_SUB`         | Out       | DAC channel 2 — SUB modified signal                                        |
+| PB8 (47)              | `CAN_RX`          | In        | FDCAN receive from vehicle bus                                             |
+| PB9 (48)              | `CAN_TX`          | Out       | FDCAN transmit to vehicle bus                                              |
+| \~PB7 (46) ⚠️         | `MCU_GATE_ENABLE` | Out       | Main MCU's half of the two-key AND-gate approval — new pin, see note below |
+| PA12 (33, remap PA10) | `HEARTBEAT`       | Out       | 50ms pulse to supervisor watchdog                                          |
+| PA11 (32, remap PA9)  | `UART_RX`         | In        | Diagnostic UART from supervisor                                            |
+| PA8 (28)              | `UART_TX`         | Out       | Diagnostic UART to supervisor                                              |
+| PA13 (35)             | `MCU_SWDIO`       | Debug     | SWD programming data                                                       |
+| PA14 (36)             | `MCU_SWDCLK`      | Debug     | SWD programming clock + BOOT0                                              |
+| PC14/PC15 (2/3)       | Crystal X1        | Clock     | 8MHz external crystal                                                      |
+| VBAT (4)              | +3.3V             | Power     | Backup domain supply                                                       |
+| VREF+ (5)             | +3.3V + 100nF     | Power     | ADC reference voltage                                                      |
+| VDD/VDDA (6)          | +3.3V             | Power     | Main and analog supply                                                     |
 
-> **Corrected again:** `HEARTBEAT` is on `PA12` (remapped as `PA10`), not `PC6` as the previous revision of this book had it. `UART_TX`/`UART_RX` also moved — `UART_TX` is now `PA8` and `UART_RX` is `PA11` (remapped as `PA9`), which is the reverse of the pin-to-direction mapping documented before. A new `MCU_GATE_ENABLE` pin (~`PB7`) has also appeared, feeding the AND gate alongside the supervisor's `SUPERVISOR_GATE_ENABLE` — see [Sheet 2 below](#sheet-2--output-submodule).
+> **Corrected again:** `HEARTBEAT` is on `PA12` (remapped as `PA10`), not `PC6` as the previous revision of this book had it. `UART_TX`/`UART_RX` also moved — `UART_TX` is now `PA8` and `UART_RX` is `PA11` (remapped as `PA9`), which is the reverse of the pin-to-direction mapping documented before. A new `MCU_GATE_ENABLE` pin (\~`PB7`) has also appeared, feeding the AND gate alongside the supervisor's `SUPERVISOR_GATE_ENABLE` — see [Sheet 2 below](schematic-details.md#sheet-2--output-submodule).
 
 ## Supervisor block — STM32G030F8P6TR
 
-> Table corrected against `Schematic_Torque-Interceptor_2026-08-17.png`. Part number also corrected: the schematic shows `STM32G030F8P6TR` (64KB flash), not `F6P6TR` (32KB) — flagged in [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic).
+> Table shows the pin on the safety supervisor chip and it's function.
 
-| Pin | Net label | Direction | Purpose |
-|---|---|---|---|
-| PA0 (7) | `MAIN_ADC` | In | Independent torque MAIN read |
-| PA1 (8) | `SUB_ADC` | In | Independent torque SUB read |
-| PA2 (9) | `UART_TX` | Out | Diagnostic to main MCU (crossover) |
-| PA3 (10) | `UART_RX` | In | Diagnostic from main MCU (crossover) |
-| PA5 (12) | `HEARTBEAT` | In | Reads main MCU's watchdog heartbeat |
-| PA6 (13) | `SUPERVISOR_GATE_ENABLE` | Out | Supervisor's half of the two-key AND-gate approval |
-| PA12 (17, remap PA10) | `FAULT_OUT` | In | Hardware output fault from LM393 |
-| PA13 (18) | `SWDIO` | Debug | SWD programming data |
-| ~PA14 (19) | `SWDCLK` | Debug | SWD programming clock + BOOT0 |
-| VDDA/DDA (4) | +3.3V | Power | Combined VDD+VDDA (TSSOP-20 pinout) |
+| Pin                   | Net label                | Direction | Purpose                                            |
+| --------------------- | ------------------------ | --------- | -------------------------------------------------- |
+| PA0 (7)               | `MAIN_ADC`               | In        | Independent torque MAIN read                       |
+| PA1 (8)               | `SUB_ADC`                | In        | Independent torque SUB read                        |
+| PA2 (9)               | `UART_TX`                | Out       | Diagnostic to main MCU (crossover)                 |
+| PA3 (10)              | `UART_RX`                | In        | Diagnostic from main MCU (crossover)               |
+| PA5 (12)              | `HEARTBEAT`              | In        | Reads main MCU's watchdog heartbeat                |
+| PA6 (13)              | `SUPERVISOR_GATE_ENABLE` | Out       | Supervisor's half of the two-key AND-gate approval |
+| PA12 (17, remap PA10) | `FAULT_OUT`              | In        | Hardware output fault from LM393                   |
+| PA13 (18)             | `SWDIO`                  | Debug     | SWD programming data                               |
+| \~PA14 (19)           | `SWDCLK`                 | Debug     | SWD programming clock + BOOT0                      |
+| VDDA/DDA (4)          | +3.3V                    | Power     | Combined VDD+VDDA (TSSOP-20 pinout)                |
 
 > The TSSOP-20 package combines VDD+VDDA onto one physical pin (Pin 4) and VSS+VSSA onto one pin (Pin 5). This is correct per the datasheet, not a schematic error.
 
-> **`FORCE_PT`/`GATE_ENABLE` are no longer separate nets.** The previous revision of this book described the supervisor owning both AND-gate inputs. The current schematic shows one gate-approval signal per chip instead — `SUPERVISOR_GATE_ENABLE` here and `MCU_GATE_ENABLE` on the main MCU — which is a stronger two-key arrangement, not just a rename. See [Sheet 2 below](#sheet-2--output-submodule).
 >
-> **`PA7` (previously `5V_MON`) has no net connection on the current schematic.** Flagged in [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing) — needs confirming with Ting whether ECU 5V rail monitoring was intentionally dropped.
 
 ## Sheet 2 — Output Submodule
 
@@ -132,7 +130,7 @@ MCU_GATE_ENABLE (main MCU ~PB7)          → AND gate Pin B
 AND_OUT = HIGH only when BOTH SUPERVISOR_GATE_ENABLE=HIGH AND MCU_GATE_ENABLE=HIGH
 ```
 
-> One gate-enable signal per chip, not two from the supervisor as earlier notes had it — see the correction notes on the [Main MCU](#main-mcu-block--stm32g0b1cbt6) and [Supervisor MCU](#supervisor-block--stm32g030f8p6tr) tables above.
+> One gate-enable signal per chip for a stronger safety requirement.
 
 **Sub-circuit 3: Analog switch** (TS5A23157 U7)
 
@@ -162,32 +160,32 @@ If (MAIN+SUB)/2 ≠ 2.5V → FAULT_OUT goes LOW → Supervisor PB0
 
 The original design monitored `MAIN_OUT` and `SUB_OUT` individually against 2.5V. This was wrong: during normal boost, MAIN can legitimately be anywhere from 1.0V to 4.0V, so comparing it alone against 2.5V would false-trigger at normal operating values. The correct invariant is MAIN + SUB = 5V, regardless of the individual split — so two equal resistors average MAIN and SUB, and the average sits at 2.5V precisely when the complementary relationship holds. Any fault that breaks that relationship shifts the average away from 2.5V, and the comparator catches it — independent of what either MCU believes is happening.
 
-The RC filter (1kΩ + 100nF, cutoff ~1.6kHz) ahead of the comparator input filters fast noise spikes from the automotive environment (motor switching, ignition, CAN traffic) without masking real, sustained faults.
+The RC filter (1kΩ + 100nF, cutoff \~1.6kHz) ahead of the comparator input filters fast noise spikes from the automotive environment (motor switching, ignition, CAN traffic) without masking real, sustained faults.
 
 **Power note:** LM393 VCC is 5V (must sit above the 0–5V signals it compares), but its pull-up resistors go to +3.3V, because `FAULT_OUT` feeds a 3.3V-logic supervisor GPIO — 5V would damage it.
 
 ## Net label cross-reference
 
-| Net | From | To | Purpose |
-|---|---|---|---|
-| `VCC` | H1 connector | AMS1117, dividers, op-amps | ECU 5V supply |
-| `+3.3V` | AMS1117 output | All digital chips | Regulated 3.3V |
-| `MAIN` | H2 sensor connector | AFE input, TS5A23157 COM1 | OEM MAIN torque signal |
-| `SUB` | H2 sensor connector | AFE input, TS5A23157 COM2 | OEM SUB torque signal |
-| `MAIN_ADC` | AFE voltage divider | MCU PA0, Supervisor PA0 | Scaled MAIN (0–3.3V) |
-| `SUB_ADC` | AFE voltage divider | MCU PA1, Supervisor PA1 | Scaled SUB (0–3.3V) |
-| `DAC_MAIN` | MCU PA4 | Sheet 5 op-amp U6.1 | Modified MAIN (0–3.3V) |
-| `DAC_SUB` | MCU PA5 | Sheet 5 op-amp U6.2 | Modified SUB (0–3.3V) |
-| `DAC_MAIN_OUT` | Op-amp U6.1 output | TS5A23157 NO1 | Scaled modified MAIN (0–5V) |
-| `DAC_SUB_OUT` | Op-amp U6.2 output | TS5A23157 NO2 | Scaled modified SUB (0–5V) |
-| `AND_OUT` | SN74LVC1G08 output | TS5A23157 IN1, IN2 | Combined gate approval |
-| `SUPERVISOR_GATE_ENABLE` | Supervisor PA6 | AND gate Pin A | Supervisor's half of gate approval |
-| `MCU_GATE_ENABLE` | Main MCU ~PB7 | AND gate Pin B | Main MCU's half of gate approval |
-| `MAIN_OUT` | TS5A23157 NC1/NO1 | ECU via H1, LM393 IN+ | Final MAIN signal to ECU |
-| `SUB_OUT` | TS5A23157 NC2/NO2 | ECU via H1, LM393 IN+ | Final SUB signal to ECU |
-| `FAULT_OUT` | LM393 1OUT (Pin 1) | Supervisor PA12/17 (remap PA10) | Hardware output fault signal |
-| `VREF` | R27+R28 divider | LM393 Pin 2 (1IN-) | 2.5V comparator reference |
-| `5V_MON` | — | Supervisor PA7 | **No net connection found on current schematic — see [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing)** |
-| `HEARTBEAT` | MCU PA12 (remap PA10) | Supervisor PA5 | 50ms watchdog pulse |
-| `UART_TX` / `UART_RX` | MCU PA8/PA11 (remap PA9), Supervisor PA2/PA3 | Cross-connected | UART diagnostic link |
-| `CAN_TX` / `CAN_RX` | MCU PB9/PB8 | SN65HVD230 | CAN bus |
+| Net                      | From                                         | To                              | Purpose                                                                                                                        |
+| ------------------------ | -------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `VCC`                    | H1 connector                                 | AMS1117, dividers, op-amps      | ECU 5V supply                                                                                                                  |
+| `+3.3V`                  | AMS1117 output                               | All digital chips               | Regulated 3.3V                                                                                                                 |
+| `MAIN`                   | H2 sensor connector                          | AFE input, TS5A23157 COM1       | OEM MAIN torque signal                                                                                                         |
+| `SUB`                    | H2 sensor connector                          | AFE input, TS5A23157 COM2       | OEM SUB torque signal                                                                                                          |
+| `MAIN_ADC`               | AFE voltage divider                          | MCU PA0, Supervisor PA0         | Scaled MAIN (0–3.3V)                                                                                                           |
+| `SUB_ADC`                | AFE voltage divider                          | MCU PA1, Supervisor PA1         | Scaled SUB (0–3.3V)                                                                                                            |
+| `DAC_MAIN`               | MCU PA4                                      | Sheet 5 op-amp U6.1             | Modified MAIN (0–3.3V)                                                                                                         |
+| `DAC_SUB`                | MCU PA5                                      | Sheet 5 op-amp U6.2             | Modified SUB (0–3.3V)                                                                                                          |
+| `DAC_MAIN_OUT`           | Op-amp U6.1 output                           | TS5A23157 NO1                   | Scaled modified MAIN (0–5V)                                                                                                    |
+| `DAC_SUB_OUT`            | Op-amp U6.2 output                           | TS5A23157 NO2                   | Scaled modified SUB (0–5V)                                                                                                     |
+| `AND_OUT`                | SN74LVC1G08 output                           | TS5A23157 IN1, IN2              | Combined gate approval                                                                                                         |
+| `SUPERVISOR_GATE_ENABLE` | Supervisor PA6                               | AND gate Pin A                  | Supervisor's half of gate approval                                                                                             |
+| `MCU_GATE_ENABLE`        | Main MCU \~PB7                               | AND gate Pin B                  | Main MCU's half of gate approval                                                                                               |
+| `MAIN_OUT`               | TS5A23157 NC1/NO1                            | ECU via H1, LM393 IN+           | Final MAIN signal to ECU                                                                                                       |
+| `SUB_OUT`                | TS5A23157 NC2/NO2                            | ECU via H1, LM393 IN+           | Final SUB signal to ECU                                                                                                        |
+| `FAULT_OUT`              | LM393 1OUT (Pin 1)                           | Supervisor PA12/17 (remap PA10) | Hardware output fault signal                                                                                                   |
+| `VREF`                   | R27+R28 divider                              | LM393 Pin 2 (1IN-)              | 2.5V comparator reference                                                                                                      |
+| `5V_MON`                 | —                                            | Supervisor PA7                  | **No net connection found on current schematic — see** [**Open Items**](../open-items/#5v_mon-rail-monitoring-appears-missing) |
+| `HEARTBEAT`              | MCU PA12 (remap PA10)                        | Supervisor PA5                  | 50ms watchdog pulse                                                                                                            |
+| `UART_TX` / `UART_RX`    | MCU PA8/PA11 (remap PA9), Supervisor PA2/PA3 | Cross-connected                 | UART diagnostic link                                                                                                           |
+| `CAN_TX` / `CAN_RX`      | MCU PB9/PB8                                  | SN65HVD230                      | CAN bus                                                                                                                        |
