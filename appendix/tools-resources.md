@@ -3,7 +3,7 @@
 ## MCUs
 
 - **Main:** STM32G0B1CBT6
-- **Supervisor:** STM32G030F6P6TR
+- **Supervisor:** STM32G030F8P6TR
 
 ## Reference documents
 
