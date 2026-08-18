@@ -2,6 +2,21 @@
 
 Items required before this design is treated as production-ready, grouped by what resolves them.
 
+## Critical: total power loss is not currently covered by any fail-safe
+
+This is the highest-priority open item in the project. The design's hardware fail-safe (the TS5A23157 analog switch defaulting to OEM pass-through) has been described in earlier project documentation as covering "zero power," which overstates what the hardware actually guarantees.
+
+**Verified against the TI datasheet:** the switch's NC pass-through behavior requires VCC to be present, the internal FET conduction path needs bias voltage to hold any state, including the default one. With zero board power, the switch goes high-impedance (open), not closed. This means: if the board loses power entirely, no signal, not raw, not boosted, reaches the EPS.
+
+**What is genuinely covered:** MCU or firmware failure while the board still has power (crash, hang, firmware bug, brownout with power still present). In that case both gate pins fall LOW and the switch correctly returns to pass-through with zero firmware involvement. This remains a real, verified safety property, just narrower than "handles zero power."
+
+**Investigated and ruled out:**
+- A "powered-off protection" switch variant (TS5A23159) does not solve this. That feature means clean isolation when unpowered, not held connection, every switch in this family shares the same underlying limitation.
+- A mechanical relay could genuinely hold a zero-power NC contact, but was ruled out for this application: footprint too large, switching speed too slow, mechanical wear over the vehicle's service life, and higher coil-drive current.
+- An optocoupler does not solve the problem at all, it still requires power to pass a signal, and is poorly suited to continuous analog voltage fidelity.
+
+**This needs a decision, not just an acknowledgment.** Options include: accepting the narrower safety claim as sufficient for the target ASIL, finding a different fail-safe mechanism for total power loss specifically, or determining that total power loss is an acceptable residual risk given the vehicle's own behavior under total EPS power loss (worth checking what the OEM EPS itself does if its own power is cut, since that may already be a scenario the vehicle handles independently of this board). This is a decision for the FMEDA, not something to resolve unilaterally.
+
 ## Requires FMEDA / design review
 
 ### `fault_classify()` table
@@ -28,9 +43,8 @@ The formula structure (`dac_main = main_adc + BOOST_OFFSET_COUNTS`, `dac_sub` de
 
 ## Requires hardware clarification
 
-Three questions from the original design study remain open, needed before PCB layout proceeds:
+Two questions remain open, needed before PCB layout proceeds:
 
-- **TS pin identity on the torque sensor connector.** May need an extra connector pin and schematic changes if unaddressed; a signal could otherwise be missed entirely.
 - **Maximum safe current draw from the ECU's 5V VDD.** Needed to confirm the PCB's power budget will not disturb the sensor supply or trigger an ECU fault.
 - **Whether the signal correlation check needs an additional hardware comparator**, beyond the existing LM393 resistor-averaging circuit on the output side, potentially at the ADC input stage.
 
