@@ -17,9 +17,26 @@ The two-bucket policy is justified against the ASIL B latent fault detection met
 
 ## `fault_classify()`
 
-This function assigns each detected fault to a bucket. 5 of 12 fault types have a confirmed classification: `CAN_TIMEOUT` and `LINK_TIMEOUT` (transient), and `HEARTBEAT_LOST`, `WATCHDOG_RESET`, `OUTPUT_MISMATCH` (compute-integrity). The remaining 7, `SELFTEST_FAILED`, `SIGNAL_MISMATCH`, `OUT_OF_RANGE`, `SIGNAL_STUCK`, `POWER_RAIL`, `DRIVER_OVERRIDE`, and `SUPERVISOR_DENIED`, are placed conservatively (erring toward the more restrictive compute-integrity bucket) pending FMEDA review, and should not be treated as final.
+This function assigns each detected fault to a bucket.
 
-`DRIVER_OVERRIDE` is worth flagging specifically: driver override is normal driving behavior, not a malfunction. Left in the current strict default (compute-integrity), a driver overriding assist a few times in one ordinary drive could force an unnecessary ignition-cycle-required lockout. This is the strongest candidate for reclassification in the pending review.
+| Fault code | Meaning | Bucket | Status |
+|---|---|---|---|
+| `CAN_TIMEOUT` | No fresh CAN message from KommuAssist2 | Transient | Confirmed |
+| `LINK_TIMEOUT` | Main MCU to supervisor UART link went stale | Transient | Confirmed |
+| `HEARTBEAT_LOST` | Supervisor stopped seeing the main MCU's heartbeat pulse | Compute-integrity | Confirmed |
+| `WATCHDOG_RESET` | Chip came back up via an IWDG-triggered reset | Compute-integrity | Confirmed |
+| `OUTPUT_MISMATCH` | LM393 comparator flags the output voltage as wrong | Compute-integrity | Confirmed |
+| `SELFTEST_FAILED` | Startup self-test failed | Compute-integrity (default) | Pending FMEDA review |
+| `SIGNAL_MISMATCH` | MAIN and SUB readings don't correlate as expected | Compute-integrity (default) | Pending FMEDA review |
+| `OUT_OF_RANGE` | A sensor reading is outside the valid voltage window | Compute-integrity (default) | Pending FMEDA review |
+| `SIGNAL_STUCK` | A sensor reading hasn't changed for longer than expected | Compute-integrity (default) | Pending FMEDA review |
+| `POWER_RAIL` | The board's own power rail reads out of range | Compute-integrity (default) | Pending FMEDA review |
+| `DRIVER_OVERRIDE` | Driver torque input overpowers the assist | Compute-integrity (default) | Pending FMEDA review, see note below |
+| `SUPERVISOR_DENIED` | Supervisor withheld approval without a more specific reason | Compute-integrity (default) | Pending FMEDA review |
+
+5 of 12 are confirmed. The remaining 7 are placed in the compute-integrity bucket as a conservative default, not as a reviewed decision, and should not be treated as final.
+
+`DRIVER_OVERRIDE` is worth flagging specifically: driver override is normal driving behavior, not a malfunction. Left in the current strict default, a driver overriding assist a few times in one ordinary drive could force an unnecessary ignition-cycle-required lockout. This is the strongest candidate for reclassification in the pending review.
 
 ## `FAULT_OUT`
 
