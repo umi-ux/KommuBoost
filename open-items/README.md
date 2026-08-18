@@ -12,10 +12,6 @@ Items required before this design is treated as production-ready, grouped by wha
 
 Implemented per the DBC's documented bit layout and internally self-consistent, but not yet checked against a live captured CAN frame with a known value. This requires a real reference data point, not a re-read of the specification text. See [Main MCU](../firmware/main-mcu.md#can-message).
 
-### ADC constant reconciliation
-
-Current firmware uses `620 / 3410 / 4095 / 100`. An earlier documentation draft referenced a different set (`950 / 3150 / 4065 / 80`), described as bench-measured. The authoritative set needs to be identified and the other discarded.
-
 ### Rail-voltage sense pin (supervisor)
 
 Planned as a supervisor-side self-check, not wired into the schematic or CubeMX pin configuration. Requires a decision on whether to add the wiring or drop the requirement.
@@ -64,4 +60,3 @@ Three questions from the original design study remain open, needed before PCB la
 | `STEER_CMD` bit-extraction validation | Trusting the boost trigger | Live reference frame |
 | Boost formula tuning | Real boost testing | Bench hardware |
 | Tunable constants | Timing confidence | Bench hardware |
-| ADC constant reconciliation | Input validation confidence | Clarification |
