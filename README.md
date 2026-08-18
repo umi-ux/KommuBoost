@@ -1,4 +1,4 @@
-# Torque Interceptor, Project Documentation
+# Introduction
 
 This documentation covers the design, architecture, and current implementation status of the safety-rated torque interceptor PCB developed for Kommu's KommuAssist2 (bukapilot/openpilot fork).
 
@@ -12,15 +12,15 @@ Target: **ASIL B** per ISO 26262.
 
 ## How to read this book
 
-- **Overview**, what the system does, top-level goals, timeline context
-- **Hardware**, board architecture, key components, signal path
-- **Firmware**, the three-target firmware architecture (main MCU, supervisor MCU, shared code), state machine, and fault handling in detail
-- **Open Items**, everything still unresolved, blocked, or pending sign-off, read this first if you're picking up the project
-- **Key Learnings**, design principles and lessons learned that should inform any further work
-- **Appendix**, tools, reference documents, pin assignments, and constants
+* **Overview**, what the system does, top-level goals
+* **Hardware**, board architecture, key components, signal path
+* **Firmware**, the three-target firmware architecture (main MCU, supervisor MCU, shared code), state machine, and fault handling in detail
+* **Open Items**, everything still unresolved, blocked, or pending sign-off, read this first if you're picking up the project
+* **Key Learnings**, design principles and lessons learned that should inform any further work
+* **Appendix**, tools, reference documents, pin assignments, and constants
 
 ## Quick orientation for a new reader
 
-1. Start with [Project Overview](overview/README.md)
-2. Read [Open Items & TODOs](open-items/README.md) to understand what's blocking progress
+1. Start with [Project Overview](overview/)
+2. Read [Open Items & TODOs](open-items/) to understand what's blocking progress
 3. Then go deep into [Firmware Architecture](firmware/architecture.md)
