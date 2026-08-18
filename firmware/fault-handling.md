@@ -17,7 +17,7 @@ The two-bucket policy is justified against the ASIL B latent fault detection met
 
 ## `fault_classify()`
 
-This function assigns each detected fault to a bucket. 3 of 10 entries are confirmed. The remaining 7, including `SELFTEST_FAILED`, `SIGNAL_MISMATCH`, `POWER_RAIL`, and `DRIVER_OVERRIDE`, are placed conservatively (erring toward the more restrictive bucket) pending FMEDA review, and should not be treated as final.
+This function assigns each detected fault to a bucket. 5 of 12 fault types have a confirmed classification: `CAN_TIMEOUT` and `LINK_TIMEOUT` (transient), and `HEARTBEAT_LOST`, `WATCHDOG_RESET`, `OUTPUT_MISMATCH` (compute-integrity). The remaining 7, `SELFTEST_FAILED`, `SIGNAL_MISMATCH`, `OUT_OF_RANGE`, `SIGNAL_STUCK`, `POWER_RAIL`, `DRIVER_OVERRIDE`, and `SUPERVISOR_DENIED`, are placed conservatively (erring toward the more restrictive compute-integrity bucket) pending FMEDA review, and should not be treated as final.
 
 `DRIVER_OVERRIDE` is worth flagging specifically: driver override is normal driving behavior, not a malfunction. Left in the current strict default (compute-integrity), a driver overriding assist a few times in one ordinary drive could force an unnecessary ignition-cycle-required lockout. This is the strongest candidate for reclassification in the pending review.
 
