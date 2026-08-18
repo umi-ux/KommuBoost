@@ -1,61 +1,57 @@
 # Pin Assignments & Constants
 
-> Pin tables below reflect `Schematic_Torque-Interceptor_2026-08-17.png`, the current authoritative source. See [Open Items](../open-items/README.md#pin-table-corrected-against-2026-08-17-schematic) for what changed from the previous revision of this book.
-
-## Confirmed pin assignments — Main MCU (STM32G0B1CBT6)
+## Confirmed pin assignments, Main MCU (STM32G0B1CBT6)
 
 | Pin | Net label | Purpose |
 |---|---|---|
-| PA0 (11) | `MAIN_ADC` | Read conditioned torque MAIN signal |
-| PA1 (12) | `SUB_ADC` | Read conditioned torque SUB signal |
-| PA4 (15) | `DAC_MAIN` | DAC channel 1 — MAIN modified signal |
-| PA5 (16) | `DAC_SUB` | DAC channel 2 — SUB modified signal |
-| PB8 (47) | `CAN_RX` | FDCAN receive |
-| PB9 (48) | `CAN_TX` | FDCAN transmit |
-| ~PB7 (46) ⚠️ | `MCU_GATE_ENABLE` | Main MCU's half of the two-key gate approval (new pin — see [Main MCU](../firmware/main-mcu.md)) |
-| PA12 (33, remap PA10) | `HEARTBEAT` | 50ms pulse to supervisor watchdog |
-| PA11 (32, remap PA9) | `UART_RX` | Diagnostic UART from supervisor |
-| PA8 (28) | `UART_TX` | Diagnostic UART to supervisor |
-| PA13 (35) | `MCU_SWDIO` | SWD data |
-| PA14 (36) | `MCU_SWDCLK` | SWD clock + BOOT0 |
+| PA0 | `MAIN_ADC` | Read conditioned torque MAIN signal |
+| PA1 | `SUB_ADC` | Read conditioned torque SUB signal |
+| PA4 | `DAC_MAIN` | DAC channel 1, boosted MAIN signal |
+| PA5 | `DAC_SUB` | DAC channel 2, derived SUB signal |
+| PA8 | `MCU_GATE_ENABLE` | This chip's own gate signal, to the AND gate |
+| PA9 | `UART_TX` | Diagnostic UART to supervisor |
+| PA10 | `UART_RX` | Diagnostic UART from supervisor |
+| PA12 | `HEARTBEAT` | Toggled every 50ms, watched by supervisor |
+| PB8 | `CAN_RX` | FDCAN receive |
+| PB9 | `CAN_TX` | FDCAN transmit (unused) |
+| PA13 | `SWDIO` | SWD data |
+| PA14 | `SWDCLK` | SWD clock + BOOT0 |
 
-## Confirmed pin assignments — Supervisor MCU (STM32G030F8P6TR)
+## Confirmed pin assignments, Supervisor MCU (STM32G030F6P6TR)
 
 | Pin | Net label | Purpose |
 |---|---|---|
-| PA0 (7) | `MAIN_ADC` | Independent torque MAIN read |
-| PA1 (8) | `SUB_ADC` | Independent torque SUB read |
-| PA2 (9) | `UART_TX` | Diagnostic to main MCU |
-| PA3 (10) | `UART_RX` | Diagnostic from main MCU |
-| PA5 (12) | `HEARTBEAT` | Reads main MCU's watchdog heartbeat |
-| PA6 (13) | `SUPERVISOR_GATE_ENABLE` | Supervisor's half of the two-key gate approval |
-| PA12 (17, remap PA10) | `FAULT_OUT` | Hardware output fault from LM393 |
-| PA13 (18) | `SWDIO` | SWD data |
-| ~PA14 (19) | `SWDCLK` | SWD clock + BOOT0 |
+| PA0 | `MAIN_ADC` | Independent torque MAIN read (own ADC tap) |
+| PA1 | `SUB_ADC` | Independent torque SUB read |
+| PA2 | `UART_TX` | Diagnostic UART to main MCU |
+| PA3 | `UART_RX` | Diagnostic UART from main MCU |
+| PA4 | `HEARTBEAT` | Watches main MCU's PA12 pulse |
+| PA6 | `SUPERVISOR_GATE_ENABLE` | This chip's own gate signal, to the AND gate |
+| PB0 | `FAULT_OUT` | Hardware fault signal from LM393 comparator |
+| PA13 | `SWDIO` | SWD data |
+| PA14 | `SWDCLK` | SWD clock + BOOT0 |
 
-`PA7` (previously documented as `5V_MON`) shows no net connection on the current schematic — flagged in [Open Items](../open-items/README.md#5v_mon-rail-monitoring-appears-missing).
+> **Architecture note:** `MCU_GATE_ENABLE` and `SUPERVISOR_GATE_ENABLE` are two independently-driven signals feeding an AND gate, not one chip driving both. See [Firmware Architecture](../firmware/architecture.md#split-pin-gate-control). This replaces the earlier single-owner (`FORCE_PT`/`GATE_ENABLE`, both supervisor-driven) design entirely.
 
-`FORCE_PT`/`GATE_ENABLE` — the pair this book previously documented as both owned by the supervisor — no longer exist as separate nets on the current schematic. They've been replaced by two independent signals, one per chip (`MCU_GATE_ENABLE` from the main MCU, `SUPERVISOR_GATE_ENABLE` from the supervisor), both feeding the AND gate. See [Main MCU](../firmware/main-mcu.md) and [Supervisor MCU](../firmware/supervisor-mcu.md) for the corrected, per-chip pin tables, and [Complete Signal Flow](../firmware/complete-flow.md) for how the two signals combine.
+## ADC constants (main MCU)
 
-## ADC constants
-
-Derived from bench-measured torque sensor values and the confirmed 0.645 gain from the 10k/20k resistor divider AFE:
-
-| Constant | Value |
+| Constant | Current firmware value |
 |---|---|
-| `ADC_MIN_VALID_COUNTS` | 950 |
-| `ADC_MAX_VALID_COUNTS` | 3150 |
-| `ADC_EXPECTED_SUM` | 4065 |
-| `ADC_SUM_TOLERANCE` | 80 |
+| `ADC_MIN_VALID_COUNTS` | 620 |
+| `ADC_MAX_VALID_COUNTS` | 3410 |
+| `ADC_EXPECTED_SUM` | 4095 |
+| `ADC_SUM_TOLERANCE` | 100 |
 
-**Assumptions:** `VREF = 3.3V`, 12-bit ADC resolution. **Not yet confirmed** against actual ADC configuration — see [Open Items](../open-items/README.md#vref-confirmation-for-adc-constants).
+**Assumptions:** `VREF+ = 3.3V` (confirmed against schematic), 12-bit ADC resolution.
 
-## Boost thresholds (on CAN value field, not raw ADC)
+## Boost thresholds (on `STEER_CMD` field, confirmed CAN signal)
 
 | Transition | Threshold |
 |---|---|
-| Entry to `Boost_Active` | CAN value > 200 |
-| Exit to `Normal_PassThrough` | CAN value < 185 |
+| Entry to `Boost_Active` | `STEER_REQ`=1 AND `STEER_CMD` > 200 |
+| Exit to `Normal_PassThrough` | `STEER_CMD` < 185 |
+
+`STEER_REQ` = 0 always means pass-through, regardless of `STEER_CMD`'s value. See [Main MCU](../firmware/main-mcu.md#can-message--confirmed-with-ting).
 
 ## AFE gain
 
