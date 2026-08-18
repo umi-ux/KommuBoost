@@ -1,0 +1,116 @@
+<svg viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#b91c1c"/>
+    </marker>
+  </defs>
+
+  <style>
+    .label { font-size: 13px; fill: #111; }
+    .sublabel { font-size: 11px; fill: #444; }
+    .title { font-size: 14px; font-weight: 600; fill: #111; }
+    .pin { font-size: 10px; fill: #555; font-family: monospace; }
+    .flow { stroke: #333; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+    .flowDiag { stroke: #888; stroke-width: 1.2; fill: none; stroke-dasharray: 4,3; marker-end: url(#arrow); }
+    .flowGate { stroke: #b91c1c; stroke-width: 1.8; fill: none; marker-end: url(#arrowRed); }
+  </style>
+
+  <!-- Torque Sensor -->
+  <rect x="30" y="300" width="120" height="60" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <text class="label" x="90" y="325" text-anchor="middle">Torque</text>
+  <text class="label" x="90" y="342" text-anchor="middle">Sensor</text>
+
+  <!-- AFE -->
+  <rect x="200" y="300" width="120" height="60" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <text class="label" x="260" y="325" text-anchor="middle">AFE</text>
+  <text class="sublabel" x="260" y="342" text-anchor="middle">buffer + scale</text>
+
+  <!-- arrow sensor to AFE -->
+  <path class="flow" d="M150,330 L198,330"/>
+
+  <!-- raw signal path splits here: down to input A of switch (routed below everything), and up to both MCU ADC taps -->
+  <path class="flow" d="M320,330 L360,330 L360,150 L400,150"/>
+  <path class="flow" d="M320,330 L360,330 L360,480 L400,480"/>
+  <path class="flow" d="M320,330 L360,330 L360,610 L790,610 L790,340"/>
+  <text class="sublabel" x="600" y="625" text-anchor="middle">raw signal (input A, unmodified)</text>
+
+  <!-- Main MCU box -->
+  <rect x="400" y="80" width="200" height="220" rx="6" fill="#eef4ff" stroke="#2a4d8f" stroke-width="1.5"/>
+  <text class="title" x="500" y="105" text-anchor="middle">Main MCU</text>
+  <text class="sublabel" x="500" y="120" text-anchor="middle">STM32G0B1CBT6</text>
+  <text class="pin" x="415" y="145">MAIN_ADC / SUB_ADC (in)</text>
+  <text class="pin" x="415" y="165">CAN_RX (in, STEER_REQ/CMD)</text>
+  <text class="pin" x="415" y="185">DAC_MAIN / DAC_SUB (out)</text>
+  <text class="pin" x="415" y="205">HEARTBEAT (out)</text>
+  <text class="pin" x="415" y="225">UART_TX/RX (diagnostic)</text>
+  <text class="pin" x="415" y="250" font-weight="600">MCU_GATE_ENABLE (out)</text>
+
+  <!-- Supervisor MCU box -->
+  <rect x="400" y="410" width="200" height="200" rx="6" fill="#fff4e6" stroke="#b45309" stroke-width="1.5"/>
+  <text class="title" x="500" y="435" text-anchor="middle">Supervisor MCU</text>
+  <text class="sublabel" x="500" y="450" text-anchor="middle">STM32G030F6P6TR</text>
+  <text class="pin" x="415" y="475">MAIN_ADC / SUB_ADC (in, own tap)</text>
+  <text class="pin" x="415" y="495">HEARTBEAT (in, watches main MCU)</text>
+  <text class="pin" x="415" y="515">FAULT_OUT (in, from LM393)</text>
+  <text class="pin" x="415" y="535">UART_TX/RX (diagnostic)</text>
+  <text class="pin" x="415" y="560" font-weight="600">SUPERVISOR_GATE_ENABLE (out)</text>
+
+  <!-- CAN in from top -->
+  <path class="flow" d="M500,50 L500,78"/>
+  <text class="label" x="500" y="40" text-anchor="middle">CAN (from KommuAssist2)</text>
+
+  <!-- heartbeat main to supervisor -->
+  <path class="flowDiag" d="M600,205 C 680,205 680,495 602,495"/>
+  <text class="sublabel" x="665" y="350" text-anchor="middle">heartbeat</text>
+
+  <!-- UART diagnostic link, both directions -->
+  <path class="flowDiag" d="M600,225 C 730,225 730,535 602,535"/>
+  <text class="sublabel" x="745" y="375" text-anchor="middle">UART</text>
+  <text class="sublabel" x="745" y="388" text-anchor="middle">(diagnostic</text>
+  <text class="sublabel" x="745" y="401" text-anchor="middle">only)</text>
+
+  <!-- DAC output down to analog switch -->
+  <path class="flow" d="M600,185 L660,185 L660,360 L700,360"/>
+  <text class="sublabel" x="663" y="175" text-anchor="middle">DAC out</text>
+
+  <!-- gate signals into AND gate -->
+  <path class="flowGate" d="M600,250 L660,250 L660,300 L700,300"/>
+  <path class="flowGate" d="M600,560 L660,560 L660,320 L700,320"/>
+
+  <!-- AND gate -->
+  <path fill="#fff" stroke="#333" stroke-width="1.5" d="M700,290 h30 a20,20 0 0 1 0,40 h-30 z"/>
+  <text class="label" x="720" y="315" text-anchor="middle" font-size="11">AND</text>
+
+  <!-- FAULT_OUT from analog switch monitor back to supervisor -->
+  <path class="flowDiag" d="M870,390 C 920,390 920,515 602,515"/>
+  <text class="sublabel" x="895" y="450" text-anchor="middle">FAULT_OUT</text>
+  <text class="sublabel" x="895" y="463" text-anchor="middle">(LM393)</text>
+
+  <!-- AND gate to analog switch -->
+  <path class="flow" d="M750,310 L790,310"/>
+
+  <!-- Analog switch -->
+  <rect x="790" y="270" width="120" height="150" rx="6" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+  <text class="title" x="850" y="295" text-anchor="middle">Analog</text>
+  <text class="title" x="850" y="312" text-anchor="middle">Switch</text>
+  <text class="sublabel" x="850" y="330" text-anchor="middle">TS5A23157</text>
+  <text class="pin" x="805" y="355">A: raw pass-through</text>
+  <text class="pin" x="805" y="375">B: boosted (DAC)</text>
+  <text class="sublabel" x="850" y="400" text-anchor="middle">NC default = A</text>
+
+  <!-- switch to EPS -->
+  <path class="flow" d="M910,340 L960,340"/>
+  <text class="label" x="960" y="335" text-anchor="start">EPS</text>
+  <text class="label" x="960" y="350" text-anchor="start">ECU</text>
+
+  <!-- legend -->
+  <line x1="30" y1="500" x2="55" y2="500" stroke="#333" stroke-width="1.6"/>
+  <text class="sublabel" x="62" y="504" text-anchor="start">signal path</text>
+  <line x1="30" y1="522" x2="55" y2="522" stroke="#888" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <text class="sublabel" x="62" y="526" text-anchor="start">diagnostic / monitoring</text>
+  <line x1="30" y1="544" x2="55" y2="544" stroke="#b91c1c" stroke-width="1.8"/>
+  <text class="sublabel" x="62" y="548" text-anchor="start">gate control (safety-critical)</text>
+</svg>
