@@ -6,7 +6,7 @@ Items required before this design is treated as production-ready, grouped by wha
 
 ### `fault_classify()` table
 
-3 of 10 entries are confirmed. The remaining 7 are placed conservatively pending FMEDA review. `DRIVER_OVERRIDE` is the strongest candidate for reclassification: it reflects normal driving behavior, not a malfunction, and its current strict classification risks an unnecessary ignition-cycle-required lockout after ordinary driver overrides. See [Fault Handling](../firmware/fault-handling.md#fault_classify).
+5 of 12 fault types are confirmed (see [Fault Handling](../firmware/fault-handling.md#fault_classify) for the full list). The remaining 7 are placed conservatively pending FMEDA review. `DRIVER_OVERRIDE` is the strongest candidate for reclassification: it reflects normal driving behavior, not a malfunction, and its current strict classification risks an unnecessary ignition-cycle-required lockout after ordinary driver overrides. See [Fault Handling](../firmware/fault-handling.md#fault_classify).
 
 ### `STEER_CMD` bit-extraction
 
