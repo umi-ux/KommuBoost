@@ -1,41 +1,42 @@
-/* torque_interceptor_sm.h - MAIN MCU (STM32G0B1CBT6)
+/* main_mcu.h - MAIN MCU (STM32G0B1CBT6)
  *
- * Runs the boost decision logic. Does NOT drive FORCE_PT/GATE_ENABLE -
- * those pins physically belong to the safety supervisor (STM32G030),
- * per the schematic. This MCU can only REQUEST boost over UART; the
- * supervisor independently re-checks and has final veto.
- *
- * NOTE: signal_flow_all_scenarios.html (your scenario walkthrough) says
- * in one place that the main MCU "raises FORCE_PT" directly. That
- * contradicts both the schematic (FORCE_PT lives on the Supervisor
- * sheet) and the same document's own fault scenario (which has the
- * SUPERVISOR pulling FORCE_PT low). Firmware follows the schematic -
- * confirm with Ting which is actually true in hardware.
+ * Runs the boost decision logic AND, under the updated split-pin gate
+ * architecture, directly drives MCU_GATE_ENABLE from its own decision.
+ * The supervisor independently drives SUPERVISOR_GATE_ENABLE from ITS
+ * own decision. An AND gate downstream requires BOTH to agree before
+ * the analog switch actually connects boosted output to the EPS - so
+ * this chip does not need to wait for supervisor approval over UART
+ * before acting; the hardware AND gate is what enforces the veto, not
+ * software trust in a UART message. UART is now a secondary/diagnostic
+ * channel, not the sole approval path (see shared_protocol.h).
  *
  * States match the approved Torque_Interceptor_State_Diagram_v2:
- *   Power_Off_NC_PassThrough -> hardware default, no MCU running, not
- *                               represented here on purpose.
+ *   Power_Off_NC_PassThrough -> hardware default, not represented here.
  *   Startup_SelfTest         -> STATE_STARTUP
  *   Normal_PassThrough       -> STATE_NORMAL_PASSTHROUGH
  *   Boost_Active             -> STATE_BOOST_ACTIVE
  *   Fault_Detected           -> STATE_FAULT
  *
- * Hardware assumptions (confirm against schematic/bench before trusting):
- *   - MAIN/SUB torque signal: ~2.5V neutral, valid range ~1.0-4.0V.
- *   - MAIN_ADC + SUB_ADC should sum to a constant - characterize this
- *     against real bench data, ADC_EXPECTED_SUM below is a placeholder.
- *   - Boost gate: CAN "boost requested" flag + can_value field, checked
- *     against BOOST_THRESHOLD. CONFIRMED with Ting: threshold applies
- *     to the CAN value field, not the local MAIN_ADC reading.
- *   - The actual boost AMOUNT (how DAC_MAIN/DAC_SUB are computed from
- *     can_value / main_adc) is NOT yet determined - left as a TODO in
- *     the .c file on purpose. Do not assume the 1.5x gain mentioned in
- *     your scenario doc applies here - that's the fixed op-amp scaling
- *     stage (3.3V DAC -> 5V ECU), a different thing from the boost
- *     torque calculation itself.
+ * *** TBC ***
+ *   - CAN message: BO_ 464 STEERING_LKAS. STEER_REQ (1 bit) says
+ *     whether to even look at STEER_CMD at all - if STEER_REQ==0,
+ *     ignore STEER_CMD entirely and stay pass-through. STEER_CMD
+ *     (11 bits) is the value compared against BOOST_THRESHOLD.
+ *     See CAN_ID_STEERING_LKAS in this file for bit-position detail
+ *     and an open question about signed vs unsigned interpretation
+ *     still worth double-checking against a real captured frame.
+ *
+ * *** STILL UNCONFIRMED, FLAG ***
+ *   - Boost amount formula (DAC_MAIN/DAC_SUB from can_value/main_adc)
+ *     still undetermined. A separate flowchart suggested SUB is
+ *     mirrored/derived from MAIN to preserve a target sum, rather than
+ *     independently computed - worth confirming with Ting.
+ *   - Rail-voltage sensing: no ADC channel exists for this on the main
+ *     MCU per the generated CubeMX project - only the supervisor senses
+ *     its own rail. Dropped from this file's checks accordingly.
  */
-#ifndef TORQUE_INTERCEPTOR_SM_H
-#define TORQUE_INTERCEPTOR_SM_H
+#ifndef MAIN_MCU_H
+#define MAIN_MCU_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -49,33 +50,41 @@
 #define ADC_MAX_VALID_COUNTS      3410u   /* ~4.0V equivalent */
 #define ADC_EXPECTED_SUM          4095u   /* MAIN_ADC + SUB_ADC target - characterize */
 #define ADC_SUM_TOLERANCE         100u
-#define ADC_STUCK_TIMEOUT_MS      500u    /* re-check against real driving data */
+#define ADC_STUCK_TIMEOUT_MS      500u
 
 #define HEARTBEAT_PERIOD_MS       50u
 #define CAN_MSG_TIMEOUT_MS        100u
 
-/* Boost threshold with hysteresis so a value hovering near the edge
- * doesn't flicker in and out of boost every cycle. Enter boost above
- * BOOST_THRESHOLD; once active, only DROP OUT below
- * (BOOST_THRESHOLD - BOOST_THRESHOLD_HYSTERESIS). Both PLACEHOLDER -
- * the gap size should be picked from real CAN value noise/jitter on
- * the bench, not guessed. */
-#define BOOST_THRESHOLD             200u   /* out of 255 CAN scanner units - CONFIRMED vs CAN field */
-#define BOOST_THRESHOLD_HYSTERESIS  15u    /* PLACEHOLDER */
+#define BOOST_THRESHOLD             200u
+#define BOOST_THRESHOLD_HYSTERESIS  15u
 
-#define RAIL_5V_MIN_MV            4750u
-#define RAIL_5V_MAX_MV            5250u
+/* PLACEHOLDER - simple fixed offset approach, approved as a starting
+ * point pending Ting's real formula. MAIN gets pushed up by this many
+ * ADC counts; SUB is derived to preserve the MAIN+SUB=ADC_EXPECTED_SUM
+ * invariant (matches the "S2 mirrored" idea from the flowchart) rather
+ * than being independently computed. Tune this single number once
+ * real bench data exists - no logic rewrite needed to change it. */
+#define BOOST_OFFSET_COUNTS         30u
 
-/* How many CONSECUTIVE bad samples an input check must see before it's
- * treated as a real fault rather than noise. This is what actually
- * implements "single ADC noise is transient" from the confirmed policy -
- * a lone bad sample gets absorbed here and never even becomes a logged
- * fault event. PLACEHOLDER - pick from real bench noise characterization. */
 #define FAULT_DEBOUNCE_SAMPLES     3u
-
-/* How long to sit in FAULT before attempting an auto-recovery
- * transition back to STARTUP, for classes that allow it. PLACEHOLDER. */
 #define FAULT_RECOVERY_DEBOUNCE_MS 200u
+
+/* Fixed period (ms) sm_run() should actually execute at - see
+ * sm_loop_ready(). Keep comfortably faster than CAN_MSG_TIMEOUT_MS and
+ * PROTO_LINK_TIMEOUT_MS. */
+#define SM_LOOP_PERIOD_MS          10u
+
+/* CAN message - CONFIRMED: BO_ 464 STEERING_LKAS
+ *   SG_ STEER_REQ : 21|1@0+ (1,0) [0|1]     - 1 = boost request active, 0 = pass through, ignore STEER_CMD
+ *   SG_ STEER_CMD : 7|11@0- (1,0) [0|255]   - the value to compare against BOOST_THRESHOLD
+ * NOTE: DBC declares STEER_CMD as 11-bit SIGNED (@0-) but states range
+ * [0|255] - these don't match (11-bit signed could be -1024..1023).
+ * This file extracts the raw 11-bit value UNSIGNED (no sign extension)
+ * on the assumption the real range is 0-255 as Ting stated and the
+ * declared bit width just has headroom. *** VERIFY against a real
+ * captured frame with a known STEER_CMD value before trusting this -
+ * multi-byte bit extraction is an easy place to be subtly wrong. *** */
+#define CAN_ID_STEERING_LKAS       464u
 
 /* ---------------------------------------------------------------------
  * States
@@ -90,7 +99,6 @@ typedef enum {
 typedef struct {
     uint16_t main_adc;
     uint16_t sub_adc;
-    uint16_t rail_5v_mv;
     bool     can_boost_requested;
     bool     can_fresh;
     uint16_t can_value;
@@ -108,37 +116,29 @@ typedef struct {
     uint32_t     last_heartbeat_sent_ms;
     uint32_t     fault_entered_ms;
 
-    /* Debounce - consecutive-failure streak before a raw check failure
-     * is allowed to become a real fault. Reset on pass, on STARTUP
-     * entry, and on entering FAULT. Tracks WHICH fault type is
-     * streaking (input_fail_last_code) so that e.g. one rail glitch +
-     * one range glitch + one correlation glitch in a row do NOT get
-     * mistaken for the same problem persisting 3 cycles - the streak
-     * only counts consecutive occurrences of the SAME fault code. */
     uint8_t      input_fail_streak;
     fault_code_t input_fail_last_code;
 
-    /* UART link to supervisor - this MCU can only REQUEST boost */
+    /* UART link - now a diagnostic/secondary channel, see shared_protocol.h */
     uint8_t      tx_seq;
     uint32_t     last_uart_tx_ms;
     uint32_t     last_valid_rx_ms;
-    bool         supervisor_approved;
+    bool         supervisor_approved;   /* informational only now */
     fault_code_t supervisor_fault;
 
-    /* Two-bucket recovery tracking (confirmed policy, see fault_codes.h).
-     * Drive-scoped: cleared only on ignition cycle.
-     *
-     * compute_fault_seen_mask: one bit per fault_code_t value (FAULT_COUNT
-     * is well under 32, so a uint32_t bitmask is enough). A bit is set
-     * the FIRST time that specific compute-integrity fault occurs this
-     * drive. If that SAME fault type occurs again before the next
-     * ignition cycle - regardless of what other faults happened in
-     * between - it escalates. This replaces remembering only the single
-     * most recent compute fault, which could never notice a fault type
-     * recurring if a different fault type happened in between. */
+    /* Two-bucket recovery tracking - per-fault-type bitmask, drive-scoped */
     uint32_t     compute_fault_seen_mask;
     bool         recovery_latched;
     bool         pending_recovery;
+
+    /* Own gate pin state - directly reflects this chip's own decision */
+    bool         mcu_gate_state;
+
+    /* Set once at sm_init() if the chip just came back from an IWDG
+     * timeout (previous cycle hung and the watchdog force-reset us).
+     * Reported as FAULT_WATCHDOG_RESET the first time sm_run() has a
+     * real snapshot to pass to enter_fault() with, then cleared. */
+    bool         pending_watchdog_fault;
 } sm_context_t;
 
 void sm_init(sm_context_t *ctx, uint32_t now_ms);
@@ -146,4 +146,16 @@ void sm_run(sm_context_t *ctx, const sensor_snapshot_t *snap);
 void sm_notify_ignition_cycle(sm_context_t *ctx, uint32_t now_ms);
 const char *sm_state_name(sm_state_t s);
 
-#endif /* TORQUE_INTERCEPTOR_SM_H */
+/* Call every iteration of main()'s while(1) loop. Returns true exactly
+ * when SM_LOOP_PERIOD_MS has elapsed since the last true return. */
+bool sm_loop_ready(void);
+
+/* Current time in ms since boot, from HAL's own SysTick-driven tick
+ * (HAL_GetTick()) - no custom timebase needed now that HAL owns SysTick. */
+uint32_t sm_now_ms(void);
+
+/* Fills a sensor_snapshot_t with real ADC/CAN readings for this cycle.
+ * Call this, then pass the result to sm_run(). */
+void sm_read_snapshot(sensor_snapshot_t *snap);
+
+#endif /* MAIN_MCU_H */
