@@ -1,42 +1,36 @@
 # State Machine
 
-The main MCU owns a 5-state state machine. For the full cycle-by-cycle behavior on both chips (self-test, debounce, hysteresis, watchdog, fault recovery), see [Complete Signal Flow](complete-flow.md) — this page is the state-machine-only summary.
+The main MCU owns a 4-state machine. `Power_Off_NC_PassThrough` is a hardware-only condition, not a firmware state.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Power_Off_NC_PassThrough
-    Power_Off_NC_PassThrough --> Startup_SelfTest: power applied
-    Startup_SelfTest --> Normal_PassThrough: self-test pass
-    Startup_SelfTest --> Fault_Detected: self-test fail
-    Normal_PassThrough --> Boost_Active: CAN value > 200
-    Boost_Active --> Normal_PassThrough: CAN value < 185 (hysteresis)
-    Normal_PassThrough --> Fault_Detected: fault detected
-    Boost_Active --> Fault_Detected: fault detected
-```
+## State diagram
 
-## Startup self-test
-
-On power-up, before any active operation, the main MCU runs one **raw (non-debounced)** check: is `MAIN_ADC`/`SUB_ADC` in range, correlated, and not stuck? Fail → straight to `Fault_Detected`. Pass → `Normal_PassThrough`. This is a single pass/fail check, distinct from the continuous *debounced* monitoring described below and in [Complete Signal Flow](complete-flow.md#the-always-watching-layer--runs-every-cycle-forever-on-both-chips-independently).
+> *(space reserved: Startup_SelfTest, Normal_PassThrough and Boost_Active in a cycle, with Fault_Detected reachable from any state)*
 
 ## State descriptions
 
 | State | Description |
 |---|---|
-| `Power_Off_NC_PassThrough` | Hardware default. The NC analog switch provides pass-through purely from being unpowered — no firmware involvement. This is the state the board is in before any MCU has even booted. |
-| `Startup_SelfTest` | Entered on power-up. Runs self-test routines before allowing any active operation. |
-| `Normal_PassThrough` | Firmware-managed pass-through. Torque sensor signal passes to the ECU, monitored but not modified. |
-| `Boost_Active` | Boost engaged — DAC output modifies the signal per the boost formula (see [Open Items](../open-items/README.md#boost-amount-formula) — this is not yet finalized). |
-| `Fault_Detected` | Entered from any state when a fault is detected. Recovery behavior depends on fault classification — see [Fault Handling](fault-handling.md). |
+| `Power_Off_NC_PassThrough` | Hardware default. The NC analog switch provides pass-through purely from being unpowered. Covers the switch losing its control signal, not the board losing physical continuity with the signal path entirely, see [Firmware Architecture](architecture.md#power-caveat-fail-safe-with-zero-power-covers-logicmcu-failure-not-physical-disconnection). |
+| `Startup_SelfTest` | Entered on boot. Runs one raw, non-debounced input check. A bad sample here is not forgiven, since the point is confirming the signal is trustworthy before entering service. |
+| `Normal_PassThrough` | Continuous debounced validation running every cycle. Torque signal passes to the ECU unmodified. `MCU_GATE_ENABLE` driven LOW every cycle. |
+| `Boost_Active` | Boost engaged. `MCU_GATE_ENABLE` driven HIGH every cycle. DAC output active, see [Main MCU](main-mcu.md#boost-output). |
+| `Fault_Detected` | Entered from any state on a validation failure. Recovery per the two-bucket policy, see [Fault Handling](fault-handling.md). |
 
-## Boost entry/exit thresholds
+## Boost entry and exit
 
-Boost activation is gated on the **CAN value field**, not the raw ADC reading:
+Gated on two signals from `BO_ 464 STEERING_LKAS` (see [Main MCU](main-mcu.md#can-message)):
 
-- **Entry:** CAN value > 200 → transition to `Boost_Active`
-- **Exit:** CAN value < 185 → transition back to `Normal_PassThrough`
+1. `STEER_REQ`: if 0, `STEER_CMD` is ignored entirely and the state stays `Normal_PassThrough`.
+2. `STEER_CMD`, evaluated only once `STEER_REQ` = 1:
+   - Entry: `STEER_CMD` > 200 transitions to `Boost_Active`
+   - Exit: `STEER_CMD` < 185 (200 minus a 15-count hysteresis band) transitions back to `Normal_PassThrough`
 
-The gap between 185 and 200 is a deliberate hysteresis band, preventing state chatter if the CAN value sits near a single threshold.
+The 185-200 gap prevents state chatter when the value sits near the threshold.
+
+## Gate output
+
+The state machine drives `MCU_GATE_ENABLE` directly from its own logic, independent of the supervisor. Whether boost actually reaches the EPS is decided downstream, in the AND-gate hardware, by combining this chip's pin with the supervisor's independently-computed `SUPERVISOR_GATE_ENABLE`. See [Firmware Architecture](architecture.md).
 
 ## Why input validation is always-on, but boost computation is gated
 
-Input validation and monitoring (ADC range checks, stuck-value checks, etc.) run continuously regardless of state. Boost *computation* only engages once CAN value > 200. This is a deliberate split between the **safety monitoring** function (always active) and the **ADAS function** (only active when commanded and within valid conditions) — see [Key Learnings](../key-learnings/README.md) for why this split matters.
+Input validation runs every cycle regardless of state, so a sensor fault is never missed just because no boost was requested. Boost computation only engages once `STEER_REQ`/`STEER_CMD` conditions are met. This is the deliberate split between the always-on safety monitoring function and the gated ADAS function.

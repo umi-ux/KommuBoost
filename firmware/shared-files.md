@@ -1,17 +1,19 @@
 # Shared Files
 
-Code shared between the main MCU and supervisor MCU builds.
+Code shared between the main MCU and supervisor MCU builds. Both projects use CubeMX's Basic application structure, so peripheral handles (`hadc1`, `huart1`/`huart2`, `hfdcan1`, `hiwdg`) are declared as plain globals directly in each project's `main.c`, with no `extern` declaration anywhere else. Both `main_mcu.c` and `main_supervisor.c` declare their own `extern` lines for the handles they need, matching `main.c` exactly.
 
 ## `fault_codes.h` / `fault_codes.c`
 
-Defines the fault code enumeration and fault classification data used by both targets. This is where `fault_classify()` lives — see [Fault Handling](fault-handling.md#fault_classify--status) for its current status (3 of 10 entries confirmed, 7 pending Ting's FMEDA review).
+Defines the fault code enumeration and fault classification data used by both targets. Physically copied into both projects and kept identical on both sides, since a fault code sent over UART from one chip needs to mean the same thing on the other. This is where `fault_classify()` lives, see [Fault Handling](fault-handling.md#fault_classify) for its current status.
 
 ## `shared_protocol.h` / `shared_protocol.c`
 
-Defines the UART frame protocol used between the main MCU and supervisor MCU.
+Defines the UART frame protocol used between the main MCU and supervisor MCU: sync byte, sequence counter, checksum, and per-chip diagnostic fields (ADC readings, CAN value, fault codes). Kept identical on both sides.
 
-**Status: drafted but unconfirmed with Ting.** This is currently the largest unresolved piece of firmware work in the project — see [Open Items](../open-items/README.md#uart-protocol-between-mcus). Nothing downstream of this (e.g. supervisor-side recovery-latch enforcement, which needs to communicate fault/recovery state to the main MCU) can be finalized until the frame format is signed off.
+This link is diagnostic and secondary, not part of the safety-critical gating decision, see [Firmware Architecture](architecture.md). Each chip computes and drives its own gate pin independently; UART carries cross-visibility information for logging and bench debugging.
+
+The checksum is a simple additive byte sum, not a CRC, and is weak against certain corruption patterns. Upgrading it is recommended before a production revision.
 
 ## `reg_defs.h`
 
-Technically shared infrastructure rather than a "shared file" in the same sense — a hand-written, minimal register definition header covering only the GPIO and RCC peripherals actually used by either target. See [Firmware Architecture](architecture.md#no-hal--register-level-approach) for the rationale and the bug history behind the rule to never invent a register or offset.
+No longer in use. This was a hand-written register definition header from an earlier register-only approach, superseded by CubeMX-generated HAL code. Retained as documented history in [Firmware Architecture](architecture.md) for the register-offset bug it caught during development.
