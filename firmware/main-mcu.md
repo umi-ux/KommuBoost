@@ -68,7 +68,6 @@ IWDG active, refreshed every loop cycle (prescaler 32, reload 500, ~500ms timeou
 
 - Validate `STEER_CMD` bit-extraction against a live captured CAN frame with a known value
 - Bench-tune `BOOST_OFFSET_COUNTS`, or replace the formula shape if a flat offset proves wrong
-- Reconcile the ADC constants above against any independently bench-measured values
 - Implement ignition-cycle detection, or formally confirm it is unnecessary given the board's power architecture
 - Upgrade the UART checksum from a simple additive sum to a CRC before a production revision
 - Complete a systematic bench-validation pass on all debounce/timeout/hysteresis constants
