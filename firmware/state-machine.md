@@ -4,7 +4,9 @@ The main MCU owns a 4-state machine. `Power_Off_NC_PassThrough` is a hardware-on
 
 ## State diagram
 
-> *(space reserved: Startup_SelfTest, Normal_PassThrough and Boost_Active in a cycle, with Fault_Detected reachable from any state)*
+![State diagram](../assets/diagrams/state-diagram.png)
+
+The main MCU's full state machine, Power Off through Startup, Normal Pass-through, Boost Active, and Fault Detected. The nested arcs at the top all represent the same underlying trigger, total loss of the board's 5V supply, shown from each active state since it can happen at any point. Note the Power Off box's description: it does not claim the board fails safely here, it states plainly that the switch goes open and no signal reaches the ECU, this is the same unresolved power gap noted throughout the docs, shown here at the state-machine level. The red arrow along the bottom is the soft-retry path (Fault Detected back to Startup) for transient or first-time compute-integrity faults, recovering without needing a full power cycle, distinct from the top arcs which require an actual power cycle to clear.
 
 ## State descriptions
 
