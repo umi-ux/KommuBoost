@@ -30,6 +30,10 @@ Files: `main_mcu.h`, `main_mcu.c`
 
 ## CAN message
 
+![Boost decision flowchart](../assets/diagrams/boost-decision-flowchart.png)
+
+Step-by-step path from a CAN frame arriving to a boost command actually reaching the output. Two things are worth noticing: input validation runs continuously, every cycle, whether or not boost is being requested, it's never skipped just because nothing's happening. And the decision to boost isn't final until both the main MCU's own check and the supervisor's own independent check agree, shown as the two parallel checks converging before the final gate decision. Any red-labeled path represents a validation failure, all of which lead to Fault Detected regardless of where in the flow they happen.
+
 `BO_ 464 STEERING_LKAS`, from `perodua_general_pt.dbc`:
 
 | Signal | Bits | Meaning |
